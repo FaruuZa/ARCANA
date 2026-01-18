@@ -3,7 +3,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Server } from "socket.io";
-import { createGameState } from "./gameState.js";
+import { createGameState, spawnUnit } from "./gameState.js";
 import { gameLoop } from "./gameLoop.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,24 +22,29 @@ setInterval(() => {
   io.emit("state", gameState);
 }, TICK_RATE);
 
-gameState.units.push({
-  id: 1,
-  team: 0,
-  type: "melee",
-  lane: 0,
-  rowProgress: 0.2,
-  offsetX : 0,
-  offsetY: 0,
-  speed: 0.05,
-  range: 0.35,
+spawnUnit(gameState, {
+  cardId: "vessel_01", // ID sembarang dulu
+  team: 0,             // Player Bawah
+  lane: 0,             // Lane Tengah
+  speed: 4,          // Speed standar
   hp: 100,
-  attackTimer: 0,
-  attackCooldown: 1,
-  damage: 10
+  range:2.0,
+  damage: 25
+});
+spawnUnit(gameState, {
+  cardId: "vessel_01", // ID sembarang dulu
+  team: 1,             // Player Atas
+  lane: 0,             // Lane Tengah
+  speed: 4,          // Speed standar
+  hp: 100,
+  range:7.0,
+  damage: 25
 });
 
 
+
 app.use(express.static(path.join(__dirname, "../client")));
+app.use("/shared", express.static(path.join(__dirname, "../shared")));
 
 io.on("connection", socket => {
   console.log("client connected");

@@ -1,48 +1,61 @@
+import { distance } from "../utils/math.js";
+
 export function updateTargeting(gameState) {
   const units = gameState.units;
+  const buildings = gameState.buildings;
 
-  for (const unit of units) {
-    // 1. Lewati unit mati
-    if (unit.hp <= 0) continue;
+  // 1. Definisikan siapa saja yang bisa menjadi TARGET (Musuh)
+  const allPotentialTargets = [...units, ...buildings];
+  
+  // 2. Definisikan siapa saja yang bisa MENYERANG (Attacker)
+  // SEKARANG: Kita gabung units DAN buildings agar Tower juga mencari target
+  const allAttackers = [...units, ...buildings];
 
-    // 2. Jika masih punya target dan target masih hidup → biarkan
-    if (unit.targetId !== null) {
-      const target = units.find(u => u.id === unit.targetId);
-      if (target && target.hp > 0) {
-        continue;
+  for (const attacker of allAttackers) {
+    // Lewati jika attacker sudah hancur/mati
+    if (attacker.hp <= 0) continue;
+
+    // --- LOGIC VALIDASI TARGET LAMA (Sticky) ---
+    if (attacker.targetId !== null) {
+      const currentTarget = allPotentialTargets.find(e => e.id === attacker.targetId);
+      
+      // Target valid jika: Ada, Hidup, dan Masih dalam Range
+      if (currentTarget && currentTarget.hp > 0) {
+        const dist = distance(attacker, currentTarget);
+        
+        // Toleransi sedikit (0.5 grid) agar target tidak lepas-pasang (flicker) di ujung range
+        if (dist <= attacker.range + 0.5) { 
+           continue; // Masih valid, skip cari baru
+        }
       }
-
-      // target sudah mati / hilang
-      unit.targetId = null;
+      
+      // Target tidak valid / kabur -> Reset
+      attacker.targetId = null;
     }
 
-    // 3. Cari target baru
+    // --- LOGIC MENCARI TARGET BARU ---
     let closestTarget = null;
     let closestDist = Infinity;
 
-    for (const other of units) {
-      if (other.id === unit.id) continue;
-      if (other.team === unit.team) continue;
-      if (other.hp <= 0) continue;
+    for (const potentialTarget of allPotentialTargets) {
+      if (potentialTarget.id === attacker.id) continue; // Jangan target diri sendiri
+      if (potentialTarget.team === attacker.team) continue; // Jangan target teman
+      if (potentialTarget.hp <= 0) continue; // Jangan target mayat
 
-      // 4. Aturan lane (melee lane-lock)
-      if (other.lane !== unit.lane) continue;
+      const dist = distance(attacker, potentialTarget);
 
-      // 5. Hitung jarak logis di lane
-      const dist = Math.abs(other.progress - unit.progress);
-
-      // 6. Cek engagement range
-      if (dist > unit.sightRange) continue;
-
-      if (dist < closestDist) {
-        closestDist = dist;
-        closestTarget = other;
+      // Cek apakah masuk Range si Attacker
+      if (dist <= attacker.range) {
+        if (dist < closestDist) {
+          closestDist = dist;
+          closestTarget = potentialTarget;
+        }
       }
     }
 
-    // 7. Set target jika ketemu
+    // Set Target jika ketemu
     if (closestTarget) {
-      unit.targetId = closestTarget.id;
+      attacker.targetId = closestTarget.id;
     }
   }
 }

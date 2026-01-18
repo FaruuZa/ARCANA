@@ -1,23 +1,19 @@
 import { gameState } from "../state/gameState.js";
-import {unitToScreen} from "../utils/grid.js"
-import { worldToScreen, laneToScreen } from "../utils/utils.js";
+import { unitToScreen } from "../utils/grid.js"; // Hapus import createGrid yg tidak perlu
 
 const unitSprites = new Map();
 
 let _app = null;
+let _grid = null; // Simpan grid di variable module-level
 
-const CAMERA_OFFSET = {
-  x: 0,
-  y: -300,
-};
-
-export function initUnits(app) {
-  const layer = new PIXI.Container();
+export function initUnits(app, grid) { // Terima parameter grid
   _app = app;
+  _grid = grid; // Simpan grid untuk dipakai di syncUnits
+
+  const layer = new PIXI.Container();
   layer.zIndex = 10;
   app.stage.addChild(layer);
   app.stage.sortableChildren = true;
-
 
   gameState.subscribe((state) => {
     syncUnits(state.units, layer);
@@ -25,11 +21,12 @@ export function initUnits(app) {
 }
 
 function syncUnits(units = [], layer) {
-  const grid = _app ? createGrid(_app) : null;
-  if (!layer.parent) return; // stage belum siap
+  // Gunakan _grid yang sudah disimpan, jangan create baru
+  if (!_app || !_grid || !layer.parent) return; 
 
   const aliveIds = new Set(units.map((u) => u.id));
 
+  // 1. Hapus sprite unit yang mati
   for (const [id, sprite] of unitSprites) {
     if (!aliveIds.has(id)) {
       sprite.destroy();
@@ -37,6 +34,7 @@ function syncUnits(units = [], layer) {
     }
   }
 
+  // 2. Update/Create unit
   for (const unit of units) {
     let sprite = unitSprites.get(unit.id);
 
@@ -46,13 +44,14 @@ function syncUnits(units = [], layer) {
       layer.addChild(sprite);
     }
 
-    const pos = unitToScreen(unit, grid);
+    // Gunakan fungsi unitToScreen dari utils/grid.js
+    const pos = unitToScreen(unit, _grid);
     sprite.x = pos.x;
     sprite.y = pos.y;
   }
 }
 
-function createUnitSprite(unit, grid) {
+function createUnitSprite(unit) {
   const g = new PIXI.Graphics();
   
   if (unit.team === 0) {
@@ -61,11 +60,8 @@ function createUnitSprite(unit, grid) {
     g.beginFill(0xff0000); // MERAH
   }
 
-  g.drawCircle(0, 0, 20);
+  g.drawCircle(0, 0, 5); 
   g.endFill();
-
-
-  console.log("UNIT CREATED", unit.id);
 
   return g;
 }

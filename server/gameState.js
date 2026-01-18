@@ -1,3 +1,6 @@
+import { createTower } from "./entity/building.js";
+
+
 export function createGameState() {
   return {
     tick: 0,
@@ -19,10 +22,13 @@ export function createGameState() {
     },
 
     units: [],
-    buildings: [],
+    buildings: [
+      createTower({ id: 1000, team: 0 }),
+      createTower({ id: 1001, team: 1 })
+    ],
     projectiles: [],
 
-    nextEntityId: 1
+    nextEntityId: 1002
   };
 }
 
@@ -47,21 +53,3 @@ export function spawnUnit(state, data) {
   state.units.push(unit);
 }
 
-export function updateUnits(state, dt) {
-  for (const unit of state.units) {
-
-    // === GERAK MAJU DI LANE
-    if (unit.team === 0) {
-      unit.progress += unit.speed * dt;
-    } else {
-      unit.progress -= unit.speed * dt;
-    }
-
-    // === CLAMP (WAJIB)
-    unit.progress = Math.max(0, Math.min(1, unit.progress));
-
-    // === MICRO OFFSET (VISUAL / CHASE)
-    unit.offsetX = 0;
-    unit.offsetY = Math.sin(state.tick * 0.15 + unit.id) * 0.25;
-  }
-}

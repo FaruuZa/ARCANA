@@ -1,4 +1,4 @@
-export function initTowers(app, theme) {
+export function initTowers(app, grid, theme) {
   const layer = new PIXI.Container();
 
   const W = app.screen.width;

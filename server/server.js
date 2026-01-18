@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { Server } from "socket.io";
 import { createGameState } from "./gameState.js";
-import { startGameLoop } from "./gameLoop.js";
+import { gameLoop } from "./gameLoop.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,20 +14,30 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const gameState = createGameState();
+const TICK_RATE = 1000 / 30; // 30 ticks per second
+const DT = TICK_RATE / 1000; // delta time in seconds
 
-startGameLoop(gameState, io);
+setInterval(() => {
+  gameLoop(gameState, DT);
+  io.emit("state", gameState);
+}, TICK_RATE);
 
 gameState.units.push({
   id: 1,
   team: 0,
+  type: "melee",
   lane: 0,
-  progress: 0.2,
-  offsetX: 0,
+  rowProgress: 0.2,
+  offsetX : 0,
   offsetY: 0,
-
-  speed:0.05,
-  hp: 100
+  speed: 0.05,
+  range: 0.35,
+  hp: 100,
+  attackTimer: 0,
+  attackCooldown: 1,
+  damage: 10
 });
+
 
 app.use(express.static(path.join(__dirname, "../client")));
 
@@ -46,6 +56,6 @@ io.on("connection", socket => {
 });
 
 
-server.listen(6967, () => {
-  console.log("Server running on port 6967");
+server.listen(8000, () => {
+  console.log("Server running on port 8000");
 });

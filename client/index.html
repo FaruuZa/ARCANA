@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Arcana</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="game-viewport">
+        
+  <!-- CANVAS AREA -->
+  <div id="canvas-container">
+    <!-- Pixi canvas akan masuk ke sini -->
+
+    <div id="status" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); color:white; font-weight:bold; text-shadow:1px 1px 0 #000; z-index:200;">
+      Connecting...
+    </div>
+  </div>
+
+  <!-- BOTTOM UI -->
+  <div id="game-ui">
+    <div id="bottom-panel">
+      <div id="info-row">
+        <div id="elixir-area">
+          <div class="elixir-bar-bg">
+            <div id="elixir-fill"></div>
+          </div>
+          <div id="elixir-text">5</div>
+        </div>
+      </div>
+      <div id="hand-cards"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@7/dist/pixi.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script type="module" src="./main.js"></script>
+
+</body>
+
+</html>

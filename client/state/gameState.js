@@ -1,5 +1,7 @@
 const listeners = new Set();
 
+export let myTeamId = -1;
+
 export const gameState = {
   data: {
     phase: "loading",
@@ -13,6 +15,15 @@ export const gameState = {
   set(newState) {
     this.data = newState;
     listeners.forEach(fn => fn(this.data));
+  },
+  setMyTeam(id) {
+    myTeamId = id;
+    console.log("I am now playing as Team:", id);
+  },
+  
+  // Getter
+  getMyTeam() {
+    return myTeamId;
   },
 
   subscribe(fn) {

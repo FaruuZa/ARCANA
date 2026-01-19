@@ -4,13 +4,19 @@ export const SOLARIS_THEME = {
   ...baseTheme,
 
   board: {
-    background: 0x8888ff,
-    river: 0x3f6aa1,
-    laneLine: 0xaaaaaa,
+    background: 0x8888ff, // Biru Terang
+    river: 0x3f6aa1,      // Biru Laut
+    laneLine: 0xaaaaaa,   // Garis Putih
   },
 
-  tower: {
-    friendly: 0x88ff88,
-    enemy: 0xff8888,
+  towers: {
+    base: 0xFFD700, // EMAS (Gold)
+  },
+
+  units: {
+    primary: 0xFFFF00, // KUNING TERANG
   }
 };
+
+// Opsional: Export alias agar kompatibel jika ada import lama
+export const factionATheme = SOLARIS_THEME;

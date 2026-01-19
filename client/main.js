@@ -2,6 +2,8 @@ console.log("MAIN JS LOADED");
 
 import { initSocket } from "./net/socket.js";
 import { initRenderer } from "./render/renderer.js";
+import {initInput } from "./input/pointer.js"
+import { initUI } from "./render/ui.js";
 
 const container = document.getElementById("canvas-container");
 
@@ -22,3 +24,6 @@ initRenderer(app);
 
 // 4. INIT SOCKET (STATE MASUK)
 initSocket();
+
+initInput(app);
+initUI();

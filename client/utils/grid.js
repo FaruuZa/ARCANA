@@ -1,4 +1,5 @@
 import { GRID, LANE_COLUMNS } from "../../shared/constants.js";
+import { myTeamId } from "../state/gameState.js";
 
 export function createGrid(app) {
   const usableWidth = app.screen.width;
@@ -28,51 +29,40 @@ export function createGrid(app) {
 }
 
 export function unitToScreen(unit, grid) {
-  // 1. Tentukan Kolom
-  let colIndex;
-  if (typeof unit.col !== 'undefined') {
-      colIndex = unit.col;
-  } else {
-      colIndex = LANE_COLUMNS[unit.lane];
+  // 1. Tentukan Kolom & Baris Asli Server
+  let serverCol = (typeof unit.col !== 'undefined') ? unit.col : LANE_COLUMNS[unit.lane];
+  let serverRow = unit.row; // Asumsi unit.row sudah ada (karena grid system)
+  
+  // Fallback rowProgress jika row belum ada (legacy support)
+  if (typeof serverRow === 'undefined') {
+      serverRow = unit.rowProgress * grid.rows;
   }
 
-  // 2. Tentukan Baris
-  let visualRow;
-  if (typeof unit.row !== 'undefined') {
-      visualRow = grid.rows - unit.row;
-  } else {
-      visualRow = grid.rows - (unit.rowProgress * grid.rows);
+  // === LOGIC ROTASI BOARD (Relative Perspective) ===
+  // Jika saya Team 1 (Atas), saya ingin melihat diri saya di Bawah.
+  // Maka, koordinat harus dibalik: 
+  // - Server Row 33 (Base Team 1) -> Jadi Render Row 0 (Bawah)
+  // - Server Col 18 (Kanan) -> Jadi Render Col 0 (Kiri)
+  
+  let renderCol = serverCol;
+  let renderRow = serverRow;
+
+  if (myTeamId === 1) {
+      renderCol = (grid.cols - 1) - serverCol;
+      renderRow = (grid.rows - 1) - serverRow;
   }
 
-  // === PERBAIKAN: CENTERING ===
-  // Tambahkan grid.cellSize / 2 agar titik (x,y) berada di TENGAH kotak, bukan di pojok kiri atas
+  // 2. Konversi ke Pixel (Render)
+  // Rumus: Y = BoardBottom - (Row * CellSize) - HalfCell
+  // Ini akan menaruh Row 0 di Bawah, dan Row 33 di Atas.
+  
   const halfCell = grid.cellSize / 2;
 
-  const x =
-    grid.offsetX +
-    (colIndex * grid.cellSize) + 
-    halfCell +               // <-- Centering X
-    (unit.offsetX || 0);
+  const x = grid.offsetX + (renderCol * grid.cellSize) + halfCell + (unit.offsetX || 0);
 
-  const y =
-    grid.offsetY +
-    (visualRow * grid.cellSize) - // Perhatikan minus/plus arah row
-    halfCell +               // <-- Centering Y (karena y visualRow adalah "bottom line" dari row tersebut jika pakai logika grid.rows - unit.row. Mari kita sesuaikan logika ini.)
-    (unit.offsetY || 0);
-  
-  // KOREKSI VISUAL ROW:
-  // Server Row 0 = Titik paling bawah board.
-  // Visual Canvas Y paling bawah = offsetY + boardHeight.
-  // Rumus yang lebih aman:
-  // Y = (Board Bottom) - (Row * CellSize) - HalfCell
-  
-  const safeY = grid.offsetY + grid.boardHeight - (unit.row * grid.cellSize) - halfCell;
+  // Perhatikan: Kita pakai renderRow di sini
+  const y = grid.offsetY + grid.boardHeight - (renderRow * grid.cellSize) - halfCell + (unit.offsetY || 0);
 
-  // Jika unit masih pakai rowProgress lama (fallback)
-  if (typeof unit.row === 'undefined') {
-     return { x, y: grid.offsetY + (grid.rows - unit.rowProgress * grid.rows) * grid.cellSize }; 
-  }
-
-  return { x, y: safeY };
+  return { x, y };
 }
 

@@ -1,20 +1,17 @@
 import { gameState } from "../state/gameState.js";
 import { unitToScreen } from "../utils/grid.js";
-// Import tema agar tower warnanya sesuai faksi
 import { SOLARIS_THEME } from "./themes/solaris.js";
 import { NOCTIS_THEME } from "./themes/noctis.js";
 
 const towerSprites = new Map();
-let _app = null;
-let _grid = null;
+let _app, _grid;
 
 export function initTowers(app, grid) {
   _app = app;
   _grid = grid;
-  const layer = new PIXI.Container();
   
-  // Z-Index: Di atas Board (0), di bawah Unit (10)
-  layer.zIndex = 5; 
+  const layer = new PIXI.Container();
+  layer.zIndex = 5; // Di bawah unit
   app.stage.addChild(layer);
 
   gameState.subscribe((state) => {
@@ -22,63 +19,92 @@ export function initTowers(app, grid) {
   });
 }
 
-function syncTowers(towers = [], layer) {
-    if (!_grid || !layer.parent) return;
+function syncTowers(buildings, layer) {
+  const activeIds = new Set();
 
-    const aliveIds = new Set(towers.map(t => t.id));
+  buildings.forEach(b => {
+    activeIds.add(b.id);
+    let container = towerSprites.get(b.id);
 
-    // 1. Cleanup tower yang hancur
-    for (const [id, sprite] of towerSprites) {
-        if (!aliveIds.has(id)) {
-            sprite.destroy();
-            towerSprites.delete(id);
-        }
+    if (!container) {
+      container = createTowerVisual(b);
+      towerSprites.set(b.id, container);
+      layer.addChild(container);
+      
+      // Posisi Tower (Static, set sekali saja cukup sebenarnya, 
+      // tapi kalau ada flip board perlu update posisi jika resize)
     }
+    
+    // Selalu update posisi (karena board bisa di-flip/resize)
+    const pos = unitToScreen(b, _grid);
+    container.x = pos.x;
+    container.y = pos.y;
 
-    // 2. Update / Create tower
-    for (const tower of towers) {
-        let sprite = towerSprites.get(tower.id);
+    updateTowerHP(container, b);
+  });
 
-        if (!sprite) {
-            // Create sprite baru berdasarkan tipe dan tim
-            sprite = createTowerSprite(tower, _grid.cellSize);
-            towerSprites.set(tower.id, sprite);
-            layer.addChild(sprite);
-        }
-
-        // Posisi: Gunakan data 'row' dan 'col' dari server
-        // Kita manfaatkan fungsi unitToScreen yang sudah diperbaiki di utils/grid.js
-        // Kita buat objek dummy yang strukturnya mirip unit
-        const posData = { row: tower.row, col: tower.col, offsetX: 0, offsetY: 0 };
-        const screenPos = unitToScreen(posData, _grid);
-
-        sprite.x = screenPos.x;
-        sprite.y = screenPos.y;
+  // Hapus tower hancur
+  for (const [id, container] of towerSprites) {
+    if (!activeIds.has(id)) {
+      container.destroy();
+      towerSprites.delete(id);
     }
+  }
 }
 
-function createTowerSprite(tower, cellSize) {
-    const g = new PIXI.Graphics();
-    const theme = tower.team === 0 ? SOLARIS_THEME : NOCTIS_THEME;
-    const color = theme.tower.friendly;
+function createTowerVisual(building) {
+  const container = new PIXI.Container();
+  
+  const isKing = building.type === 'king';
+  const size = isKing ? _grid.cellSize * 1.2 : _grid.cellSize * 0.8;
+  const color = building.team === 0 ? SOLARIS_THEME.towers.base : NOCTIS_THEME.towers.base;
 
-    g.beginFill(color);
+  // Body
+  const g = new PIXI.Graphics();
+  g.beginFill(color);
+  if (isKing) {
+      g.drawRect(-size/2, -size/2, size, size); // Kotak besar
+  } else {
+      g.drawRect(-size/2, -size/2, size, size); // Kotak kecil
+  }
+  g.endFill();
+  
+  // Border
+  g.lineStyle(2, 0xFFFFFF);
+  g.drawRect(-size/2, -size/2, size, size);
+  
+  container.addChild(g);
 
-    // Scaling ukuran tower terhadap cell baru yang lebih kecil
-    // King = 3x3 cell (lebih besar dan megah)
-    // Side = 2x2 cell
-    const scale = tower.type === 'king' ? 2.5 : 1.8; 
-    const size = cellSize * scale;
-    
-    // Draw Centered
-    g.drawRect(-size/2, -size/2, size, size); 
-    g.endFill();
+  // HP Bar (Lebih besar dari unit)
+  const barW = 40;
+  const barH = 8;
+  const yOffset = -size/2 - 15;
 
-    // Indikator arah
-    g.beginFill(0xFFFFFF, 0.5);
-    const dir = tower.team === 0 ? -1 : 1; 
-    g.drawRect(-2, (size/2 * dir) - 5, 4, 10);
-    g.endFill();
+  const bg = new PIXI.Graphics();
+  bg.beginFill(0x000000);
+  bg.drawRect(-barW/2, yOffset, barW, barH);
+  container.addChild(bg);
 
-    return g;
+  const fill = new PIXI.Graphics();
+  fill.name = "hpBar";
+  container.addChild(fill);
+
+  return container;
+}
+
+function updateTowerHP(container, building) {
+  const barFill = container.getChildByName("hpBar");
+  if (!barFill) return;
+
+  const pct = Math.max(0, building.hp / building.maxHp);
+  const barW = 40;
+  const barH = 8;
+  const isKing = building.type === 'king';
+  const size = isKing ? _grid.cellSize * 1.2 : _grid.cellSize * 0.8;
+  const yOffset = -size/2 - 15;
+
+  barFill.clear();
+  barFill.beginFill(0x00FF00); // Tower selalu hijau sampai hancur (opsional)
+  barFill.drawRect(-barW/2 + 1, yOffset + 1, (barW - 2) * pct, barH - 2);
+  barFill.endFill();
 }

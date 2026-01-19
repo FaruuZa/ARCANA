@@ -7,13 +7,13 @@ export const GRID = {
 // Lane 1 (Tengah) : Col 9  (Tepat di tengah)
 // Lane 2 (Kanan)  : Col 16 (Menyisakan Col 17 & 18 sebagai gap)
 export const LANE_COLUMNS = {
-  0: 2, 
+  0: 3, 
   1: 9, 
-  2: 16  
+  2: 15  
 };
 
 // --- UPDATE JEMBATAN FISIK ---
-export const BRIDGE_COLUMNS = [2, 16]; 
+export const BRIDGE_COLUMNS = [3, 15]; 
 
 export const RIVER_ROW_START = 16;
 export const RIVER_ROW_END = 18;
@@ -34,3 +34,5 @@ export const TOWER_POSITIONS = {
 };
 
 export const BASE_SPEED_TILES_PER_SEC = 5.0;
+export const MAX_ARCANA = 10;
+export const ARCANA_REGEN_PER_SEC = 0.5;

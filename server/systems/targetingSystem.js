@@ -1,61 +1,92 @@
 import { distance } from "../utils/math.js";
 
-export function updateTargeting(gameState) {
+export function updateTargeting(gameState, dt) {
   const units = gameState.units;
   const buildings = gameState.buildings;
+  // [FIX] Gabungkan untuk pencarian target
+  const allEntities = [...units, ...buildings];
 
-  // 1. Definisikan siapa saja yang bisa menjadi TARGET (Musuh)
-  const allPotentialTargets = [...units, ...buildings];
-  
-  // 2. Definisikan siapa saja yang bisa MENYERANG (Attacker)
-  // SEKARANG: Kita gabung units DAN buildings agar Tower juga mencari target
-  const allAttackers = [...units, ...buildings];
+  for (const unit of units) {
+    // 0. Kurangi Timer Deploy (jika ada)
+    if (unit.stateTimer > 0) {
+        unit.stateTimer -= dt;
+    }
 
-  for (const attacker of allAttackers) {
-    // Lewati jika attacker sudah hancur/mati
-    if (attacker.hp <= 0) continue;
-
-    // --- LOGIC VALIDASI TARGET LAMA (Sticky) ---
-    if (attacker.targetId !== null) {
-      const currentTarget = allPotentialTargets.find(e => e.id === attacker.targetId);
-      
-      // Target valid jika: Ada, Hidup, dan Masih dalam Range
-      if (currentTarget && currentTarget.hp > 0) {
-        const dist = distance(attacker, currentTarget);
+    // === KASUS 1: SEDANG ATTACKING (Fokus Nembak) ===
+    if (unit.state === 'attacking') {
+        const target = allEntities.find(e => e.id === unit.targetId);
         
-        // Toleransi sedikit (0.5 grid) agar target tidak lepas-pasang (flicker) di ujung range
-        if (dist <= attacker.range + 0.5) { 
-           continue; // Masih valid, skip cari baru
+        // Target mati/hilang? -> Jalan lagi
+        if (!target || target.hp <= 0) {
+            unit.targetId = null;
+            unit.state = 'moving';
+            continue;
         }
-      }
-      
-      // Target tidak valid / kabur -> Reset
-      attacker.targetId = null;
+
+        // Musuh kabur dari range? -> Kejar lagi
+        if (distance(unit, target) > unit.range + 0.5) {
+            unit.state = 'moving'; 
+        }
+        
+        continue; 
     }
 
-    // --- LOGIC MENCARI TARGET BARU ---
-    let closestTarget = null;
-    let closestDist = Infinity;
-
-    for (const potentialTarget of allPotentialTargets) {
-      if (potentialTarget.id === attacker.id) continue; // Jangan target diri sendiri
-      if (potentialTarget.team === attacker.team) continue; // Jangan target teman
-      if (potentialTarget.hp <= 0) continue; // Jangan target mayat
-
-      const dist = distance(attacker, potentialTarget);
-
-      // Cek apakah masuk Range si Attacker
-      if (dist <= attacker.range) {
-        if (dist < closestDist) {
-          closestDist = dist;
-          closestTarget = potentialTarget;
+    // === KASUS 2: SEDANG PRE-ATTACK (Persiapan) ===
+    if (unit.state === 'pre_attack') {
+        if (unit.stateTimer <= 0) {
+            // Waktu persiapan selesai -> Mulai Nembak
+            unit.state = 'attacking';
         }
-      }
+        continue;
     }
 
-    // Set Target jika ketemu
-    if (closestTarget) {
-      attacker.targetId = closestTarget.id;
+    // === KASUS 3: SEDANG MOVING (Cari Musuh) ===
+    if (unit.state === 'moving') {
+        
+        // A. Cek Target yang sedang dikejar (jika ada)
+        if (unit.targetId) {
+            const target = allEntities.find(e => e.id === unit.targetId);
+            if (target && target.hp > 0) {
+                // Apakah sudah sampai jarak tembak?
+                if (distance(unit, target) <= unit.range) {
+                    startAttackStance(unit);
+                }
+                continue; 
+            } else {
+                unit.targetId = null; // Target mati, cari yang baru
+            }
+        }
+
+        // B. Scan Musuh Baru (Sight Range)
+        let closestTarget = null;
+        let minDist = unit.sightRange; 
+
+        for (const other of allEntities) {
+            if (other.team === unit.team) continue; // Teman sendiri
+            if (other.hp <= 0) continue; // Sudah mati
+
+            const d = distance(unit, other);
+            
+            if (d <= minDist) {
+                minDist = d;
+                closestTarget = other;
+            }
+        }
+
+        if (closestTarget) {
+            unit.targetId = closestTarget.id;
+            
+            // Jika kebetulan langsung dekat, langsung stance
+            if (minDist <= unit.range) {
+                startAttackStance(unit);
+            }
+        }
     }
   }
+}
+
+function startAttackStance(unit) {
+    unit.state = 'pre_attack';
+    // Gunakan deployTime dari kartu (default 0.5 detik)
+    unit.stateTimer = unit.deployTime || 0.5; 
 }

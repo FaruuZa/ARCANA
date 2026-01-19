@@ -21,12 +21,16 @@ export function createUnit(data) {
     // Stats Combat
     hp: data.hp ?? 100,
     maxHp: data.hp ?? 100,
-    damage: data.damage ?? 10,
-    range: data.range ?? 1.0, // Jarak serang (kotak)
+    damage: data.damage,
+    range: data.range,
+    sightRange: data.sightRange || 5.0, // Default sight
+    deployTime: data.deployTime || 0.5, // Default stance switch time
     speed: data.speed ?? BASE_SPEED_TILES_PER_SEC,
     attackSpeed: data.attackSpeed ?? 1.0, // Detik per serangan
     
     // State Dinamis
+    state: 'moving', 
+    stateTimer: 0,
     attackCooldown: 0,
     targetId: null,
     isDead: false

@@ -9,7 +9,7 @@ import { MAX_ARCANA, ARCANA_REGEN_PER_SEC } from "../shared/constants.js"; // Im
 
 export function gameLoop(gameState, dt) {
   // Update Systems
-  updateTargeting(gameState);
+  updateTargeting(gameState, dt);
   updateMovement(gameState, dt);
   updateAttacks(gameState, dt);
   updateProjectiles(gameState, dt);

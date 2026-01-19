@@ -31,23 +31,29 @@ export function updateAttacks(gameState, dt) {
              // +0.5 toleransi agar tidak glitch di ujung range
              if (distance(unit, target) <= unit.range + 0.5) {
                  
-                 // Spawn Projectile
-                 const isMelee = unit.range <= 2.0;
-                 
-                 const proj = createProjectile({
-                    id: gameState.nextEntityId++,
-                    ownerId: unit.id,
-                    targetId: target.id,
-                    damage: unit.damage,
-                    team: unit.team,
-                    col: unit.col,
-                    row: unit.row,
-                    speed: isMelee ? 20.0 : 10.0, // Melee cepat, Ranged standar
-                    type: isMelee ? 'slash' : 'arrow'
-                 });
-                 gameState.projectiles.push(proj);
+                 // [LOGIC MELEE VS RANGED]
+                 const isRanged = unit.range > 2.0;
 
-                 // Reset Cooldown
+                 if (isRanged) {
+                     // RANGED: Spawn Projectile
+                     const proj = createProjectile({
+                        id: gameState.nextEntityId++,
+                        ownerId: unit.id,
+                        targetId: target.id,
+                        damage: unit.damage,
+                        team: unit.team,
+                        col: unit.col,
+                        row: unit.row,
+                        speed: 10.0,
+                        type: 'arrow'
+                     });
+                     gameState.projectiles.push(proj);
+                 } else {
+                     // MELEE: Instant Damage (Tanpa Projectile)
+                     target.hp -= unit.damage;
+                     // console.log(`Melee Hit! ${unit.id} -> ${target.id}`);
+                 }
+
                  unit.attackCooldown = 1.0 / unit.attackSpeed;
              }
         } else {

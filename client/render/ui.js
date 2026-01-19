@@ -68,18 +68,18 @@ function updateArcana(state) {
 
 function updateHand(state) {
   if (myTeamId === -1) return;
+  
+  // Bersihkan mode spectator jika ada
   if (elHand.classList.contains("spectator-mode")) {
       elHand.innerHTML = "";
       elHand.classList.remove("spectator-mode");
-      elBottomPanel.style.pointerEvents = "auto";
+      document.getElementById("bottom-panel").style.pointerEvents = "auto";
   }
 
-  const myPlayer = state.players[myTeamId];
+  const myPlayer = state.players[myTeamId]; // Pastikan pakai ID tim kita
   if (!myPlayer) return;
 
   const hand = myPlayer.hand || [];
-  // Hapus const currentArcana di sini karena itu penyebab bug (data lama)
-
   const signature = hand.join(",");
 
   if (signature !== lastHandSignature) {
@@ -93,6 +93,7 @@ function updateHand(state) {
       const cardEl = document.createElement("div");
       cardEl.className = "hand-card";
 
+      // Styling Kipas (Fan)
       const spread = 70;
       const center = (hand.length - 1) / 2;
       const xOffset = (index - center) * spread;
@@ -109,24 +110,28 @@ function updateHand(state) {
         <div class="card-name">${cardData.name}</div>
       `;
 
-      // === PERBAIKAN BUG DI SINI ===
+      // === [FIX BUG UTAMA DI SINI] ===
       cardEl.onclick = () => {
-        // Ambil Arcana TERBARU dari _latestState, bukan dari closure lama
         if (!_latestState) return;
-        const freshArcana = _latestState.players[0].arcana;
+        
+        // FIX: Ambil arcana milik SAYA (myTeamId), bukan players[0]
+        const myCurrentPlayer = _latestState.players[myTeamId];
+        const freshArcana = myCurrentPlayer ? myCurrentPlayer.arcana : 0;
 
+        // Cek Cost
         if (freshArcana < cardData.cost) {
-          // Animasi Shake
           const costEl = cardEl.querySelector(".card-cost");
           if (costEl) {
             costEl.classList.add("shake-cost");
             setTimeout(() => costEl.classList.remove("shake-cost"), 300);
           }
-          return;
+          return; // Gak cukup uang, stop.
         }
 
+        // Logic Pilih Kartu
         selectCard(cardId, index);
-        // Kita panggil refresh manual dengan state terbaru agar visual langsung responsif
+        
+        // Update Visual Langsung (biar pop-up / active class muncul)
         refreshCardClasses(hand, freshArcana);
       };
 
@@ -135,8 +140,7 @@ function updateHand(state) {
     });
   }
 
-  // Visual Update (Class) berjalan tiap tick, jadi visualnya benar
-  // Masalah sebelumnya cuma di logic 'onclick'
+  // Visual Update (Active/Disabled) tiap tick
   refreshCardClasses(hand, myPlayer.arcana);
 }
 

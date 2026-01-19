@@ -1,17 +1,31 @@
 import { initBoard } from "./board.js";
-import { initUnits } from "./units.js";
 import { initTowers } from "./towers.js";
-import {initProjectiles} from "./projectiles.js";
+import { initUnits, syncUnits } from "./units.js";
+import { initEffects, syncEffects} from "./effects.js";
+import {initProjectiles, syncProjectiles} from "./projectiles.js";
 
-import { SOLARIS_THEME } from "./themes/solaris.js";
 import { createGrid } from "../utils/grid.js";
+import { gameState } from "../state/gameState.js";
 
 export function initRenderer(app) {
-  const theme = SOLARIS_THEME; // nanti dari gameState.faction
   const grid = createGrid(app);
 
   initBoard(app, grid);
-  initTowers(app, grid, theme);
-  initUnits(app, grid);
-  initProjectiles(app, grid);
+  initTowers(app, grid);
+
+  const unitSystem = initUnits(app, grid);
+  const projSystem = initProjectiles(app, grid);
+  const effectSystem = initEffects(app, grid);
+
+  app.ticker.add(() => {
+      // AMBIL DATA INTERPOLASI (HALUS)
+      const renderState = gameState.getRenderState();
+      
+      if (!renderState) return;
+
+      // UPDATE VISUAL MENGGUNAKAN DATA HALUS
+      syncUnits(renderState.units || [], unitSystem.layer);
+      syncProjectiles(renderState.projectiles || [], projSystem.layer);
+      syncEffects(renderState.effects || [], effectSystem.layer);
+  });
 }

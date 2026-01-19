@@ -3,10 +3,11 @@ import { createGrid } from "../utils/grid.js";
 import { GRID } from "../../shared/constants.js";
 import { selection, clearSelection } from "../state/selection.js"; // Import Seleksi
 import { myTeamId } from "../state/gameState.js"; // Import myTeamId
+import { CARDS } from "../../shared/data/cards.js";
 
 export function initInput(app) {
   const canvas = app.view;
-
+    
   canvas.addEventListener("pointerdown", (event) => {
     // 0. Spectator tidak boleh input
     if (myTeamId === -1) {
@@ -16,6 +17,12 @@ export function initInput(app) {
     // 1. Cek Selection
     if (!selection.cardId || selection.index === -1) {
         // console.log("No card selected!");
+        return;
+    }
+
+    const cardData = CARDS[selection.cardId];
+    if (!cardData) {
+        console.error("Card data not found for ID:", selection.cardId);
         return;
     }
 
@@ -70,11 +77,23 @@ export function initInput(app) {
     console.log(`Input: Team ${myTeamId} | Vis[${visualCol},${visualRowFromTop}] -> Srv[${serverCol},${serverRow}]`);
 
     // 4. Kirim Spawn Request
-    socket.emit("spawn_unit", {
-        col: serverCol,
-        row: serverRow,
-        cardId: selection.cardId 
-    });
+    if (cardData.type === "RITUAL") {
+        // EVENT BARU: CAST_RITUAL
+        socket.emit("cast_ritual", {
+            col: serverCol,
+            row: serverRow,
+            cardId: selection.cardId
+        });
+        console.log("Input: Cast Ritual");
+    } else {
+        // EVENT LAMA: SPAWN_UNIT (Vessel / Sanctum)
+        socket.emit("spawn_unit", {
+            col: serverCol,
+            row: serverRow,
+            cardId: selection.cardId
+        });
+        console.log("Input: Spawn Unit");
+    }
 
     clearSelection();
   });

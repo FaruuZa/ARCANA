@@ -1,4 +1,4 @@
-import { gameState } from "../state/gameState.js";
+import { gameState, onStateUpdate } from "../state/gameState.js";
 
 let socket = null;
 let hasShownGameOver = false; // Flag biar alert gak muncul berkali-kali
@@ -25,7 +25,7 @@ export function initSocket() {
   });
   
   socket.on("state", (data) => {
-    gameState.set(data);
+    onStateUpdate(data);
 
     // LOGIC GAME OVER CLIENT SIDE
     if (data.phase === "ended" && !hasShownGameOver) {

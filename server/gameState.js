@@ -17,8 +17,8 @@ function shuffle(array) {
 // Helper: Buat Deck Starter
 function createStarterDeck() {
   const deck = [
-      "vessel_01", "vessel_02", "vessel_01", "vessel_02",
-      "vessel_01", "vessel_02", "vessel_01", "vessel_02"
+      "vessel_01", "vessel_02", "ritual_01", "vessel_siege",
+      "vessel_01", "vessel_healer", "vessel_healer", "ritual_01"
   ];
   return shuffle(deck);
 }
@@ -76,6 +76,7 @@ export function createGameState() {
     units: [],
     buildings: towers,
     projectiles: [],
+    effects: [], // Menyimpan data visual sementara (ledakan, spawn, dll)
     nextEntityId: nextId
   };
 }
@@ -103,7 +104,14 @@ export function spawnUnit(state, data) {
         damage: data.damage,
         range: data.range,
         speed: data.speed,
-        attackSpeed: data.attackSpeed
+        attackSpeed: data.attackSpeed,
+        deployTime: data.deployTime,
+        aimTime: data.aimTime,
+
+        movementType: data.movementType,
+        targetTeam: data.targetTeam,     // <--- Ini yang bikin Healer error
+        targetRule: data.targetRule,     // <--- Ini yang bikin Siege error
+        targetHeight: data.targetHeight
     });
     
     state.units.push(unit);

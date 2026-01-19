@@ -12,12 +12,10 @@ export function initProjectiles(app, grid) {
   layer.zIndex = 20; // Di atas unit
   app.stage.addChild(layer);
 
-  gameState.subscribe((state) => {
-    syncProjectiles(state.projectiles, layer);
-  });
+  return { layer };
 }
 
-function syncProjectiles(projectiles = [], layer) {
+export function syncProjectiles(projectiles = [], layer) {
   if (!_grid || !layer.parent) return;
 
   const aliveIds = new Set(projectiles.map(p => p.id));

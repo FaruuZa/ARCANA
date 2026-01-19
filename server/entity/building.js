@@ -18,6 +18,8 @@ export function createBuilding(data) {
     range: data.range ?? 5.0,
     attackSpeed: data.attackSpeed ?? 1.2,
     
+    entityType: 'building',
+    
     // State
     attackCooldown: 0,
     targetId: null,

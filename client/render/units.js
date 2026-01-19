@@ -15,12 +15,10 @@ export function initUnits(app, grid) {
   layer.zIndex = 10;
   app.stage.addChild(layer);
 
-  gameState.subscribe((state) => {
-    syncUnits(state.units, layer);
-  });
+  return { layer };
 }
 
-function syncUnits(units, layer) {
+export function syncUnits(units, layer) {
   const activeIds = new Set();
 
   units.forEach(unit => {

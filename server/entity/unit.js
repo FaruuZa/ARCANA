@@ -1,36 +1,40 @@
-// server/entity/unit.js
 import { BASE_SPEED_TILES_PER_SEC } from "../../shared/constants.js";
 
 export function createUnit(data) {
   return {
-    // Identitas
+    // ... properti identitas ...
     id: data.id,
-    team: data.team,       // 0 atau 1
-    cardId: data.cardId,   // ID Kartu (misal: 'knight', 'archer')
+    team: data.team,       
+    cardId: data.cardId, 
+    // ... properti posisi ...
+    lane: data.lane,       
+    col: data.col,         
+    row: data.row,         
     
-    // Posisi (Grid System)
-    lane: data.lane,       // Lane Logic (0, 1, 2)
-    col: data.col,         // Grid Column (0-18)
-    row: data.row,         // Grid Row (0-33)
-    
-    // Legacy support (untuk client transisi)
-    rowProgress: 0,        // Nanti dihitung movementSystem
-    offsetX: 0,
-    offsetY: 0,
-
-    // Stats Combat
+    // ... stats dasar ...
     hp: data.hp ?? 100,
     maxHp: data.hp ?? 100,
     damage: data.damage,
     range: data.range,
-    sightRange: data.sightRange || 5.0, // Default sight
-    deployTime: data.deployTime || 0.5, // Default stance switch time
+    sightRange: data.sightRange || 5.0,
     speed: data.speed ?? BASE_SPEED_TILES_PER_SEC,
-    attackSpeed: data.attackSpeed ?? 1.0, // Detik per serangan
+    attackSpeed: data.attackSpeed ?? 1.0,
+
+    deployTime: data.deployTime || 1.0,
+    aimTime: data.aimTime || 0.5,
+
+    // === TARGETING MODULES ===
+    movementType: data.movementType || 'ground', // Default ground
+    targetTeam: data.targetTeam || 'enemy',      // Default enemy (Penyebab Healer error kemarin)
+    targetRule: data.targetRule || 'any',        // Default any (Penyebab Siege error kemarin)
+    targetHeight: data.targetHeight || 'both',   // Default both
+
+    // Tipe Entity (Penting untuk membedakan Unit vs Building saat filtering)
+    entityType: 'unit', 
+
+    state: 'spawning', 
+    stateTimer: data.deployTime || 1.0, 
     
-    // State Dinamis
-    state: 'moving', 
-    stateTimer: 0,
     attackCooldown: 0,
     targetId: null,
     isDead: false

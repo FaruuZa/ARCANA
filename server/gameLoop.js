@@ -29,6 +29,6 @@ export function gameLoop(gameState, dt) {
       }
   }
 
-  cleanupSystem(gameState);
+  cleanupSystem(gameState, dt);
   gameState.tick++;
 }

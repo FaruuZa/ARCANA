@@ -22,6 +22,7 @@ export function createUnit(data) {
 
     deployTime: data.deployTime || 1.0,
     aimTime: data.aimTime || 0.5,
+    attackCooldown: 0,
 
     // === TARGETING MODULES ===
     movementType: data.movementType || 'ground', // Default ground
@@ -34,9 +35,13 @@ export function createUnit(data) {
 
     state: 'spawning', 
     stateTimer: data.deployTime || 1.0, 
+
+    intent: {
+      type: 'idle', // 'idle' (default/lane push), 'engage' (kejar/serang target)
+      targetId: null
+    },
     
-    attackCooldown: 0,
-    targetId: null,
+    isCrossing: false,
     isDead: false
   };
 }

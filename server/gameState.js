@@ -33,15 +33,15 @@ export function createGameState() {
     towers.push(createBuilding({
       id: nextId++, team, type, col, row,
       hp: type === 'king' ? 3000 : 1500,
-      range: type === 'king' ? 5.5 : 4.5
+      range: type === 'king' ? 8.5 : 7.5
     }));
   };
 
   // Setup Tower (Posisi Final)
   [0, 1].forEach(team => {
-    addTower(team, 'side', 2, 6);
-    addTower(team, 'king', 9, 2);
-    addTower(team, 'side', 16, 6);
+    addTower(team, 'side', 3, 6);
+    addTower(team, 'king', 9, 3);
+    addTower(team, 'side', 15, 6);
   });
 
   // --- INITIALIZE PLAYERS DENGAN HAND & DECK ---

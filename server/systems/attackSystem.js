@@ -4,108 +4,131 @@ import { createProjectile } from "../entity/projectile.js";
 export function updateAttacks(gameState, dt) {
   const units = gameState.units;
   const buildings = gameState.buildings;
-  
-  // [FIX] Definisikan allEntities untuk lookup target
   const allEntities = [...units, ...buildings];
 
-  // === 1. UNIT ATTACKS (Logic State Machine) ===
   for (const unit of units) {
     if (unit.hp <= 0) continue;
 
-    // Kurangi cooldown
-    if (unit.attackCooldown > 0) {
-        unit.attackCooldown -= dt;
+    // 0. Handle Spawning (State Timer)
+    if (unit.state === 'spawning') {
+        unit.stateTimer -= dt;
+        if (unit.stateTimer <= 0) unit.state = 'moving';
+        continue;
     }
 
-    // SYARAT WAJIB: State harus 'attacking'
-    // Jika state masih 'moving' atau 'pre_attack', dia tidak boleh menembak
-    if (unit.state !== 'attacking') continue;
+    // 1. Manage Cooldown (Selalu berkurang)
+    if (unit.attackCooldown > 0) unit.attackCooldown -= dt;
 
-    // Fire Logic
-    if (unit.attackCooldown <= 0 && unit.targetId) {
-        const target = allEntities.find(e => e.id === unit.targetId);
+    // 2. STATE MACHINE Logic berdasarkan INTENT
+    const intent = unit.intent;
+
+    if (intent.type === 'engage' && intent.targetId) {
+        const target = allEntities.find(e => e.id === intent.targetId);
         
-        // Validasi Target
-        if (target && target.hp > 0) {
-             // Cek Range lagi untuk keamanan (server authority)
-             // +0.5 toleransi agar tidak glitch di ujung range
-             if (distance(unit, target) <= unit.range + 0.5) {
-                 
-                 // [LOGIC MELEE VS RANGED]
-                 const isRanged = unit.range > 2.0;
-
-                 if (isRanged) {
-                     // RANGED: Spawn Projectile
-                     const proj = createProjectile({
-                        id: gameState.nextEntityId++,
-                        ownerId: unit.id,
-                        targetId: target.id,
-                        damage: unit.damage,
-                        team: unit.team,
-                        col: unit.col,
-                        row: unit.row,
-                        speed: 10.0,
-                        type: 'arrow'
-                     });
-                     gameState.projectiles.push(proj);
-                 } else {
-                     // MELEE: Instant Damage (Tanpa Projectile)
-                     target.hp -= unit.damage;
-                     // console.log(`Melee Hit! ${unit.id} -> ${target.id}`);
-                 }
-
-                 unit.attackCooldown = 1.0 / unit.attackSpeed;
-             }
+        // Safety check (kalau target tiba-tiba hilang sebelum targeting update)
+        if (!target || target.hp <= 0) {
+            unit.state = 'moving'; // Fallback
         } else {
-            // Target mati saat attacking -> TargetingSystem akan handle switch ke 'moving' tick depan
-            unit.targetId = null; 
-        }
-    }
-  }
+            const dist = distance(unit, target);
+            
+            // Apakah dalam Jangkauan?
+            // +0.5 toleransi agar tidak "dansa" maju mundur di perbatasan range
+            if (dist <= unit.range + 0.5) {
+                // DALAM RANGE -> COMBAT MODE
+                
+                if (unit.state === 'moving') {
+                    // Transisi: Moving -> Pre-Attack (Aiming)
+                    unit.state = 'pre_attack';
+                    unit.stateTimer = unit.aimTime;
+                } 
+                else if (unit.state === 'pre_attack') {
+                    // Sedang membidik...
+                    unit.stateTimer -= dt;
+                    if (unit.stateTimer <= 0) {
+                        unit.state = 'attacking'; // Siap tembak
+                    }
+                }
+                else if (unit.state === 'attacking') {
+                    // Sudah attacking, tunggu cooldown untuk menembak lagi
+                    performAttack(unit, target, gameState);
+                }
 
-  // === 2. TOWER ATTACKS (Logic Auto-Turret) ===
-  // Tower tidak punya state 'attacking', dia selalu siap tembak
-  for (const tower of buildings) {
-    if (tower.hp <= 0) continue;
-
-    if (tower.attackCooldown > 0) {
-        tower.attackCooldown -= dt;
-    }
-
-    // Tower langsung scan musuh terdekat
-    if (tower.attackCooldown <= 0) {
-        let target = null;
-        let minDist = tower.range;
-
-        // Cari musuh (Prioritas Unit)
-        for (const enemy of units) {
-            if (enemy.team === tower.team) continue;
-            if (enemy.hp <= 0) continue;
-
-            const d = distance(tower, enemy);
-            if (d <= minDist) {
-                minDist = d;
-                target = enemy;
+            } else {
+                // DILUAR RANGE -> KEJAR
+                // Paksa state jadi moving agar MovementSystem bekerja
+                unit.state = 'moving';
+                // Reset pre-attack timer jika kita terpaksa bergerak
+                unit.stateTimer = 0; 
             }
         }
-
-        if (target) {
-            // Tembak!
-            const proj = createProjectile({
-                id: gameState.nextEntityId++,
-                ownerId: tower.id,
-                targetId: target.id,
-                damage: 15, // Default damage tower
-                team: tower.team,
-                col: tower.col,
-                row: tower.row,
-                speed: 10.0,
-                type: 'cannonball'
-            });
-            gameState.projectiles.push(proj);
-
-            tower.attackCooldown = 1.0; 
-        }
+    } else {
+        // Intent = 'idle' (Lane Push)
+        // Paksa state jadi moving
+        unit.state = 'moving';
     }
   }
+
+  // === TOWER LOGIC (Tetap sama, simple turret) ===
+  updateTowers(buildings, units, gameState, dt);
+}
+
+function performAttack(unit, target, gameState) {
+    if (unit.attackCooldown <= 0) {
+        // [LOGIC ATTACK]
+        const isRanged = unit.range > 2.0;
+
+        if (isRanged) {
+            const proj = createProjectile({
+                id: gameState.nextEntityId++,
+                ownerId: unit.id,
+                targetId: target.id,
+                damage: unit.damage,
+                team: unit.team,
+                col: unit.col,
+                row: unit.row,
+                speed: 10.0,
+                type: 'arrow'
+            });
+            gameState.projectiles.push(proj);
+        } else {
+            target.hp -= unit.damage;
+        }
+
+        // Reset Cooldown
+        unit.attackCooldown = 1.0 / unit.attackSpeed;
+        
+    }
+}
+
+function updateTowers(buildings, units, gameState, dt) {
+    for (const tower of buildings) {
+        if (tower.hp <= 0) continue;
+        if (tower.attackCooldown > 0) tower.attackCooldown -= dt;
+
+        if (tower.attackCooldown <= 0) {
+            let target = null;
+            let minDist = tower.range;
+            for (const enemy of units) {
+                if (enemy.team === tower.team) continue;
+                if (enemy.hp <= 0) continue;
+                const d = distance(tower, enemy);
+                if (d <= minDist) { minDist = d; target = enemy; }
+            }
+            if (target) {
+                 const proj = createProjectile({
+                    id: gameState.nextEntityId++,
+                    ownerId: tower.id,
+                    targetId: target.id,
+                    damage: 15,
+                    team: tower.team,
+                    col: tower.col,
+                    row: tower.row,
+                    speed: 10.0,
+                    type: 'cannonball'
+                });
+                gameState.projectiles.push(proj);
+                tower.attackCooldown = 1.0; 
+            }
+        }
+    }
 }

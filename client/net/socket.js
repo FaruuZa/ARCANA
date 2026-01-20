@@ -26,23 +26,6 @@ export function initSocket() {
   
   socket.on("state", (data) => {
     onStateUpdate(data);
-
-    // LOGIC GAME OVER CLIENT SIDE
-    if (data.phase === "ended" && !hasShownGameOver) {
-        hasShownGameOver = true;
-        
-        // Asumsi kita Player 0
-        const myTeam = 0; 
-        const isWinner = data.winner === myTeam;
-        
-        if (isWinner) {
-            alert("VICTORY! The enemy King has fallen!");
-        } else {
-            alert("DEFEAT! Your King has fallen!");
-        }
-        
-        // Nanti bisa diganti dengan Overlay HTML yang cantik
-    }
   });
 
   return socket;

@@ -7,8 +7,19 @@ import { CARDS } from "../../shared/data/cards.js";
 import { updateGhostPosition } from "../render/ghost.js";
 import { gameState } from "../state/gameState.js";
 
+
+
+
+
+
+
+
+
+
+
 export function initInput(app) {
   const canvas = app.view;
+  const socket = initSocket();
     
     canvas.addEventListener("pointermove", (event) => {
     if (myTeamId === -1 || !selection.cardId) return;
@@ -21,66 +32,84 @@ export function initInput(app) {
     }
   });
 
-  canvas.addEventListener("pointerdown", (event) => {
-    // 0. Spectator tidak boleh input
-    if (myTeamId === -1) {
+  window.addEventListener("pointermove", (event) => {
+    if (myTeamId === -1 || !selection.cardId) {
+        // Reset ghost jika tidak ada seleksi
+        updateGhostPosition(-1, -1);
         return;
     }
 
-    // 1. Cek Selection
-    if (!selection.cardId || selection.index === -1) {
-        // console.log("No card selected!");
-        return;
-    }
-
-    const cardData = CARDS[selection.cardId];
-    if (!cardData) {
-        console.error("Card data not found for ID:", selection.cardId);
-        return;
-    }
-
-    const myPlayer = gameState.players[myTeamId];
-    if (!myPlayer || myPlayer.arcana < cardData.cost) {
-        console.log("Not enough arcana!");
-        // Bisa tambah efek suara 'error' disini
-        return; // JANGAN KIRIM KE SERVER
-    }
-
-    const socket = initSocket();
     const grid = createGrid(app);
     const { serverCol, serverRow, isValid } = getGridPosition(canvas, event, grid);
 
-    if (!isValid) return;
-
-    
-
-    // 4. Kirim Spawn Request
-    if (cardData.type === "RITUAL") {
-        // EVENT BARU: CAST_RITUAL
-        socket.emit("cast_ritual", {
-            col: serverCol,
-            row: serverRow,
-            cardId: selection.cardId
-        });
-        console.log("Input: Cast Ritual");
+    if (isValid) {
+        updateGhostPosition(serverCol, serverRow);
     } else {
-        // EVENT LAMA: SPAWN_UNIT (Vessel / Sanctum)
-        socket.emit("spawn_unit", {
-            col: serverCol,
-            row: serverRow,
-            cardId: selection.cardId
-        });
-        console.log("Input: Spawn Unit");
+        updateGhostPosition(-1, -1); // Hide ghost jika keluar arena
     }
+  });
 
-    clearSelection();
-    updateGhostPosition(-1, -1);
+  // 2. HANDLER UP (SPAWN) - Global Window
+  // Spawn terjadi saat jari diangkat (Touch Up / Mouse Up)
+  window.addEventListener("pointerup", (event) => {
+    if (myTeamId === -1) return;
+    if (!selection.cardId || selection.index === -1) return;
+
+    const cardData = CARDS[selection.cardId];
+    if (!cardData) return;
+
+    const grid = createGrid(app);
+    const { serverCol, serverRow, isValid } = getGridPosition(canvas, event, grid);
+
+    // === LOGIC PENENTUAN ===
+    if (isValid) {
+        // A. Jari dilepas di area VALID -> SPAWN
+        if (cardData.type === "RITUAL") {
+            socket.emit("cast_ritual", {
+                col: serverCol,
+                row: serverRow,
+                cardId: selection.cardId
+            });
+        } else {
+            socket.emit("spawn_unit", {
+                col: serverCol,
+                row: serverRow,
+                cardId: selection.cardId
+            });
+        }
+        
+        clearSelection();
+        updateGhostPosition(-1, -1);
+    
+    } else {
+        // B. Jari dilepas di area INVALID (Contoh: Balik ke tangan / Luar map)
+        
+        // Pengecualian: Jika dilepas tepat di atas KARTU (Klik biasa), jangan cancel.
+        // Biarkan player memilih kartu lain atau klik canvas nanti.
+        if (event.target.closest && event.target.closest('.hand-card')) {
+            // Do nothing (Switch selection handled by ui.js)
+        } else {
+            // Cancel Selection (Membatalkan)
+            clearSelection();
+            updateGhostPosition(-1, -1);
+        }
+    }
   });
 }
 
 // Helper: Hitung Posisi Grid dari Event Mouse
 function getGridPosition(canvas, event, grid) {
     const rect = canvas.getBoundingClientRect();
+    
+    // Cek apakah pointer ada di dalam bounding box Canvas
+    // (Penting: event window coordinates bisa dimana saja)
+    const isInsideX = event.clientX >= rect.left && event.clientX <= rect.right;
+    const isInsideY = event.clientY >= rect.top && event.clientY <= rect.bottom;
+
+    if (!isInsideX || !isInsideY) {
+        return { isValid: false };
+    }
+
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 

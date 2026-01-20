@@ -11,349 +11,340 @@
   --text-main: #e0e0e0;
   --font-title: 'Cinzel', serif;
   --font-body: 'Lato', sans-serif;
-  --panel-height: 220px; /* FIXED HEIGHT UNTUK PANEL */
+  --panel-height: 180px; /* Tinggi area kartu */
 }
 
-/* --- GLOBAL --- */
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: #050505;
-  background-image: radial-gradient(circle at center, #1a1a20 0%, #000 100%);
+  background: #000;
   font-family: var(--font-body);
   color: var(--text-main);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  height: 100dvh; /* Dynamic viewport for mobile */
+  height: 100dvh;
   overflow: hidden;
   user-select: none;
 }
 
-/* --- GAME VIEWPORT (FLEXBOX CONTAINER) --- */
 #game-viewport { 
   width: 100%; 
-  max-width: 450px;
+  max-width: 450px; /* Mode Portrait Mobile */
   height: 100%;
+  margin: 0 auto; /* Center di desktop */
   position: relative;
   display: flex;
   flex-direction: column;
   background: var(--bg-dark);
-  box-shadow: 0 0 80px rgba(156, 39, 176, 0.1);
-  overflow: hidden;
   border-left: 2px solid #222;
   border-right: 2px solid #222;
+  overflow: hidden;
 }
 
-/* --- CANVAS CONTAINER (FLEX GROW) --- */
+/* --- CANVAS LAYER --- */
 #canvas-container {
   position: relative;
-  flex: 1; /* Ambil sisa ruang setelah bottom panel */
+  flex: none; /* Matikan flex grow */
   width: 100%;
-  min-height: 0; /* Important for flex child */
+  height: calc(100% - var(--panel-height)); /* Tinggi Layar - Tinggi Panel */
   overflow: hidden;
   background: #111;
+  z-index: 1;
 }
 
 canvas {
   display: block;
   width: 100%;
   height: 100%;
-  background: #111;
-  image-rendering: pixelated;
 }
 
-/* --- GAME UI (BOTTOM PANEL - FIXED HEIGHT) --- */
+/* --- UI OVERLAY LAYER --- */
 #game-ui {
-  position: relative;
-  width: 100%;
-  height: var(--panel-height);
-  flex-shrink: 0; /* Jangan shrink */
-  z-index: 50;
-  overflow: visible; /* Allow cards to overflow upward */
-}
-
-#bottom-panel {
-  position: relative;
+  position: absolute; /* Overlay di atas canvas */
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none; /* Biar tembus ke canvas */
+  z-index: 50;
+}
+
+/* PANEL ANIMASI (Curtain Effect) */
+#bottom-panel {
+  position: absolute;
+  top: 0; 
+  left: 0;
+  width: 100%;
+  height: 100%; /* Menutupi seluruh layar secara default */
+  
   background: linear-gradient(180deg, #1a1a20 0%, #0a0a0c 100%);
   border-top: 4px solid var(--gold-dim);
   box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+  
+  /* Animasi Naik Turun */
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(0); /* Default: Menutup (Loading/Game Over) */
+  pointer-events: auto; /* Bisa diklik */
+  
   display: flex;
   flex-direction: column;
-  padding: 0;
 }
 
-/* --- INFO ROW (ARCANA BAR) --- */
-#info-row { 
+/* STATE: IN-GAME (Panel Turun) */
+/* Kita geser panel ke bawah, sisakan 220px (panel-height) di layar */
+#bottom-panel.panel-in-game {
+  transform: translateY(calc(100% - var(--panel-height)));
+}
+
+/* --- GAME HUD (Cards & Arcana) --- */
+#game-hud {
   position: absolute;
-  top: 12px;
+  top: 0; /* [FIX PENTING] Tempel di ATAS panel agar terlihat saat panel turun */
   left: 0;
   width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center; 
-  height: 20px;
-  z-index: 0;
-  padding: 0 40px;
+  height: var(--panel-height);
+  
+  /* Fade Out saat Loading/Game Over */
+  opacity: 1;
+  transition: opacity 0.3s;
+}
+
+/* Sembunyikan kartu jika panel menutup layar (Loading/GameOver) */
+#bottom-panel:not(.panel-in-game) #game-hud {
+  opacity: 0;
   pointer-events: none;
 }
 
+/* --- GAME OVER SCREEN --- */
+#game-over-screen {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 100%;
+  z-index: 100;
+  opacity: 1;
+  transition: opacity 0.5s 0.3s; /* Delay dikit */
+}
+
+#game-over-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#go-title {
+  font-family: var(--font-title);
+  font-size: 42px;
+  margin: 0;
+  text-shadow: 0 0 20px rgba(0,0,0,0.8);
+}
+
+#go-message { color: #aaa; margin-bottom: 30px; font-size: 14px; }
+
+.go-buttons button {
+  background: var(--card-bg);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  padding: 12px 24px;
+  font-family: var(--font-title);
+  font-size: 14px;
+  cursor: pointer;
+  margin: 0 8px;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.go-buttons button:hover {
+  background: var(--gold);
+  color: #000;
+}
+
+/* --- ARCANA BAR --- */
+#info-row { 
+  display: flex; justify-content: center; 
+  padding-top: 0px;
+  width: 100%;
+}
+
 #elixir-area { 
-  width: auto;
-  position: relative;
-  height: 100%;
-  display: flex;
-  align-items: center; 
-  justify-content: center;
-  gap: 15px; /* Jarak antara bar dan angka */
+  display: flex; align-items: center; gap: 10px; 
 }
 
 .elixir-bar-bg {
-  width: 240px; /* Lebar tetap agar centering sempurna */
-  height: 12px; 
-  background: #000;
-  border: 1px solid #333; 
-  border-radius: 6px;
-  position: relative;
+  width: 200px; height: 10px; 
+  background: #000; border: 1px solid #333; border-radius: 5px;
   overflow: hidden;
 }
 
 #elixir-fill {
-  height: 100%;
-  width: 50%;
+  height: 100%; width: 0%;
   background: linear-gradient(90deg, #7b1fa2, #e040fb);
-  box-shadow: 0 0 15px var(--arcana-glow);
-  transition: width 0.2s ease-out;
+  box-shadow: 0 0 10px var(--arcana-glow);
+  transition: width 0.1s linear;
 }
 
 #elixir-text {
-  position: static;
-  width: auto;
-  min-width: 30px;
-  text-align: left;
-  transform: none;
-  font-family: var(--font-title);
-  font-size: 18px; /* Ukuran diperkecil */
-  color: var(--arcana-glow);
-  z-index: 10;
-  text-shadow: 0 0 10px var(--arcana-purple);
-  font-weight: 900; letter-spacing: 2px;
+  font-family: var(--font-title); font-size: 18px; 
+  color: var(--arcana-glow); font-weight: bold;
 }
 
-#elixir-text::before {
-  content: none;
-}
-
-/* NEXT CARD (Hidden) */
-#next-card-area { display: none !important; }
-
-/* --- HAND CARDS (TAROT FAN) --- */
-#hand-cards { 
-  position: relative; 
-  flex: 1; 
+/* --- HAND CARDS --- */
+#hand-cards {
+  position: relative;
   width: 100%;
   height: 100%;
-  perspective: 1000px;
-  margin-top: 35px; /* Space for arcana bar */
-  z-index: 10;
+  margin-top: 10px;
+  perspective: 800px;
 }
 
 .hand-card {
   position: absolute;
-  width: 90px;
-  height: 140px;
-  left: 50%;
-  bottom: 20px;
-  
+  width: 80px; height: 120px;
+  left: 50%; bottom:70px; /* Posisi standar */
   background: var(--card-bg);
   border: 2px solid var(--gold-dim);
   border-radius: 6px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   
-  display: flex;
-  flex-direction: column;
-  align-items: center; justify-content: center;
-  cursor: pointer;
-  
-  /* FAN TRANSFORM */
-  transform: translateX(calc(-50% + var(--x))) rotate(var(--rot)) translateY(var(--y));
   transform-origin: center 150%;
-  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s;
-  
-  /* Texture */
-  background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjMWUxZTI0Ii8+CjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMyMzIzMmEiLz4KPC9zdmc+');
-}
+  transform: translateX(calc(-50% + var(--x))) rotate(var(--rot)) translateY(var(--y));
+  transition: transform 0.2s, border-color 0.2s;
+  cursor: pointer;
 
-.hand-card::after {
-  content: "";
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  right: 4px;
-  bottom: 4px;
-  border: 1px solid rgba(197, 160, 89, 0.3);
-  pointer-events: none;
-  border-radius: 4px;
+  touch-action: none; 
+  user-select: none;
 }
 
 .hand-card:hover {
-  z-index: 100 !important;
-  transform: translateX(calc(-50% + var(--x))) rotate(var(--rot)) translateY(calc(var(--y))) scale(1.15);
+  z-index: 10;
   border-color: var(--gold);
-  box-shadow: 0 0 20px rgba(197, 160, 89, 0.4);
+  transform: translateX(calc(-50% + var(--x))) rotate(var(--rot)) scale(1);
 }
 
 .hand-card.active {
-  z-index: 101 !important;
-  transform: translateX(-50%) rotate(0deg) translateY(5px) scale(1.4) !important;
+  z-index: 20;
   border-color: var(--arcana-glow);
-  box-shadow: 0 0 30px var(--arcana-purple);
+  box-shadow: 0 0 20px var(--arcana-purple);
+  transform: translateX(-50%) translateY(-20px) scale(1.2) !important;
 }
 
-/* .hand-card.disabled {
-  filter: grayscale(1) brightness(0.4);
-  cursor: not-allowed;
-  opacity: 0.6;
-} */
+.hand-card.disabled {
+  filter: grayscale(1);
+}
 
-/* --- CARD CONTENT --- */
 .card-cost {
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  font-family: var(--font-title);
-  font-size: 16px;
-  color: var(--arcana-glow);
-  font-weight: bold;
-  z-index: 5;
-  text-shadow: 0 0 5px var(--arcana-purple);
-  transition: color 0.3s ease, text-shadow 0.3s ease;
+  position: absolute; top: 4px; right: 6px;
+  color: var(--arcana-glow); font-weight: bold; font-family: var(--font-title);
 }
-
-.hand-card.disabled .card-cost {
-  color: #666;
-  text-shadow: none;
-}
-
-@keyframes shake-cost {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-3px); }
-  40% { transform: translateX(3px); }
-  60% { transform: translateX(-3px); }
-  80% { transform: translateX(3px); }
-}
-
-.shake-cost {
-  animation: shake-cost 0.3s ease-in-out;
-  color: #ff5252 !important; /* Merah terang saat error */
-  text-shadow: 0 0 8px #d50000 !important;
-}
-
-.card-type {
-  position: absolute;
-  left: 4px;
-  top: 12px;
-  bottom: 12px;
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  font-size: 7px;
-  letter-spacing: 3px;
-  color: var(--gold-dim);
-  text-align: center;
-  text-transform: uppercase;
-  border-right: 1px solid rgba(141, 112, 50, 0.2);
-  padding-left: 2px;
-}
-
-.card-desc {
-  font-family: var(--font-body);
-  font-size: 8px;
-  color: #bbb;
-  text-align: center;
-  padding: 0 12px 0 16px; /* Extra padding left for vertical text */
-  font-style: italic;
-  line-height: 1.3;
-  margin-bottom: 15px;
-}
-
 .card-name {
+  position: absolute; bottom: 6px;
+  font-size: 9px; color: var(--gold); text-align: center; width: 100%;
+  font-family: var(--font-title); text-transform: uppercase;
+}
+.card-type {
+  font-size: 8px; color: #666; writing-mode: vertical-rl;
+  position: absolute; left: 4px; top: 10px; bottom: 10px;
+}
+
+/* --- ANIMATION --- */
+@keyframes shake-cost {
+  0%, 100% { transform: translateX(0); color: var(--arcana-glow); }
+  50% { transform: translateX(-2px); color: red; }
+}
+.shake-cost { animation: shake-cost 0.2s; }
+
+/* --- RESPONSIVE MOBILE --- */
+@media (max-width: 480px) {
+  :root { --panel-height: 190px; }
+  
+  .hand-card { width: 65px; height: 100px; bottom: 85px; }
+  .elixir-bar-bg { width: 140px; }
+  #go-title { font-size: 32px; }
+}
+
+#card-info-popup {
   position: absolute;
-  bottom: 8px;
-  left: 16px; right: 4px;
-  font-family: var(--font-title);
-  font-size: 9px;
-  text-transform: uppercase;
-  color: var(--gold);
-  text-align: center;
-  border-top: 1px solid var(--gold-dim);
-  padding-top: 3px;
-}
-
-/* --- RESPONSIVE --- */
-@media (max-width: 400px) {
-  .hand-card {
-    width: 70px;
-    height: 115px;
-  }
+  bottom: 240px; /* Di atas tangan */
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+  width: 90%;
+  max-width: 300px;
   
-  .card-icon {
-    font-size: 20px;
-    margin-top: 18px;
-  }
+  background: rgba(20, 20, 25, 0.95);
+  border: 2px solid var(--gold);
+  border-radius: 8px;
+  padding: 15px;
   
-  .card-name {
-    font-size: 7px;
-  }
-  
-  .card-desc {
-    font-size: 5px;
-    padding: 0 6px 0 8px;
-  }
-}
-
-/* --- ANIMATIONS --- */
-.hand-card.using {
-  /* Override transform active/hover */
-  transform: translateX(-50%) rotate(0deg) translateY(-200px) scale(0.5) !important;
-  opacity: 0;
-  transition: all 0.3s ease-in;
-  pointer-events: none;
-}
-
-@keyframes cardEnter {
-  0% {
-    transform: translateX(calc(-50% + var(--x))) rotate(var(--rot)) translateY(100px) scale(0.8);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(calc(-50% + var(--x))) rotate(var(--rot)) translateY(var(--y)) scale(1);
-    opacity: 1;
-  }
-}
-
-.hand-card.entering {
-  animation: cardEnter 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-#game-viewport {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  gap: 5px;
+  
+  box-shadow: 0 0 30px rgba(0,0,0,0.8);
+  opacity: 0;
+  pointer-events: none; /* Biar tidak mengganggu drag */
+  z-index: 200;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-#canvas-container {
-  position: relative;
-  flex: 1;
-  width: 100%;
-  height: 400px;
-  overflow: hidden;
-  background: #ff0000;
+#card-info-popup.visible {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
 }
 
-#game-ui {
-  height: 180px;
+.info-title {
+  font-family: var(--font-title);
+  color: var(--gold);
+  font-size: 18px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+}
+
+.info-desc {
+  font-size: 12px;
+  color: #bbb;
+  font-style: italic;
+  margin-bottom: 10px;
+}
+
+.info-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #fff;
+  border-bottom: 1px solid #333;
+  padding: 2px 0;
+}
+.stat-label { color: #888; }
+
+/* ... css sebelumnya ... */
+
+#rematch-status {
+  font-family: var(--font-title);
+  font-size: 16px;
+  color: #fff;
+  margin-top: 15px;
+  letter-spacing: 1px;
+  animation: pulse-text 1.5s infinite;
+}
+
+#rematch-status.hidden {
+  display: none;
+}
+
+@keyframes pulse-text {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; text-shadow: 0 0 10px var(--arcana-glow); }
+}
+
+/* Biar tombol rematch visualnya disable kalau sudah diklik */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
 }

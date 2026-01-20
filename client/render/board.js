@@ -45,6 +45,8 @@ function drawBoard(grid) {
     topTheme = SOLARIS_THEME;
   }
 
+  
+
   // 1. ZONA ATAS VISUAL (Musuh)
   g.beginFill(topTheme.board.background);
   g.drawRect(grid.offsetX, grid.offsetY, grid.boardWidth, grid.boardHeight / 2);

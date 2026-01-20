@@ -37,14 +37,26 @@ export function createUnit(data) {
 
     // Tipe Entity (Penting untuk membedakan Unit vs Building saat filtering)
     entityType: 'unit', 
-
     state: 'spawning', 
     stateTimer: data.deployTime || 1.0, 
-
     intent: {
       type: 'idle', // 'idle' (default/lane push), 'engage' (kejar/serang target)
       targetId: null
     },
+
+    // === [NEW] TRAITS STATE ===
+    traits: data.traits || {},
+
+    // Charge State
+    chargeTimer: 0,       // Berapa lama sudah berlari
+    isCharging: false,    // Apakah efek charge aktif?
+
+    // Jump State
+    jumpCooldown: 0,
+    isJumping: false,     // Sedang di udara?
+    jumpTargetPos: null,  // Tujuan lompat
+    isChannelingJump: false,
+    jumpWindupTimer: 0,
     
     isCrossing: false,
     isDead: false

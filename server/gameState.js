@@ -17,9 +17,7 @@ function shuffle(array) {
 // Helper: Buat Deck Starter
 function createStarterDeck() {
   const deck = [
-      "vessel_01", "vessel_02", "ritual_01", "vessel_siege",
-      "vessel_valkyrie", "vessel_healer", "vessel_swarm",
-      "vessel_bomber"
+      "vessel_01", "vessel_02", "vessel_01", "vessel_02", "vessel_siege",
   ];
   return shuffle(deck);
 }
@@ -51,7 +49,7 @@ export function createGameState() {
       const fullDeck = createStarterDeck();
       
       // Ambil 4 kartu pertama sebagai Hand
-      const hand = fullDeck.splice(0, 4);
+      const hand = fullDeck.splice(0, 5);
       
       // Ambil 1 kartu berikutnya sebagai Next
       const nextCard = fullDeck.pop();
@@ -78,7 +76,9 @@ export function createGameState() {
     buildings: towers,
     projectiles: [],
     effects: [], // Menyimpan data visual sementara (ledakan, spawn, dll)
-    nextEntityId: nextId
+    nextEntityId: nextId,
+
+    rematchCount: 0
   };
 }
 
@@ -121,6 +121,7 @@ export function spawnUnit(state, data) {
         aoeRadius: data.aoeRadius || 0,
         aoeType: data.aoeType || 'target', // 'target' | 'self'
         projectileType: data.projectileType || null,
+        traits: data.traits || {},
         
 
     });

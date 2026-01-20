@@ -16,7 +16,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const gameState = createGameState();
+let gameState = createGameState();
 const TICK_RATE = 1000 / 30; // 30 ticks per second
 const DT = TICK_RATE / 1000; // delta time in seconds
 
@@ -25,12 +25,9 @@ const sessions = {
   1: null, // Socket ID untuk Team 1
 };
 
+let rematchVotes = new Set();
+
 setInterval(() => {
-  if (gameState.phase === "ended") {
-    // Kirim state terakhir sekali saja (atau handle reset logic nanti)
-    // io.emit("state", gameState); // Opsional, biarkan client handle di UI
-    return;
-  }
 
   gameLoop(gameState, DT);
 
@@ -61,14 +58,7 @@ function processCardUsage(playerState, cardInfo, cardId) {
   if (playerState.deck.length === 0) {
     // Refill deck (Logic sederhana)
     playerState.deck = [
-      "vessel_01",
-      "vessel_02",
-      "ritual_01",
-      "vessel_siege",
-      "vessel_healer",
-      "vessel_bomber",
-      "vessel_valkyrie",
-      "vessel_swarm"
+      "vessel_cavalry", 'vessel_assassin', 'vessel_swarm', 'vessel_valkyrie', 'vessel_bomber', 'vessel_healer', 'vessel_healer_2', 'ritual_01', 'ritual_01'
     ];
     playerState.deck.sort(() => Math.random() - 0.5);
   }
@@ -170,6 +160,7 @@ io.on("connection", (socket) => {
           projectileType: cardInfo.stats.projectileType || null,
           count: count,
           spawnRadius: spawnRadius,
+          traits: cardInfo.stats.traits || {},
         });
       }
     }
@@ -199,12 +190,51 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("rematch_request", () => {
+    // 1. Validasi: Hanya boleh saat game selesai
+    if (gameState.phase !== "ended") return;
+    if (assignedTeam === -1) return;
+
+    // 2. Catat Vote
+    rematchVotes.add(assignedTeam);
+    
+    // 3. Update State untuk Client (Visual "1/2 Players")
+    gameState.rematchCount = rematchVotes.size;
+
+    // 4. Cek apakah kedua player sudah setuju?
+    if (rematchVotes.has(0) && rematchVotes.has(1)) {
+        console.log("BOTH PLAYERS READY -> RESET GAME");
+        
+        // A. RESET STATE TOTAL
+        gameState = createGameState(); 
+
+        // B. ACAK FACTION (Opsional: Tukar Faction Team 0 dan 1)
+        // Secara default createGameState kasih Team 0 Solaris.
+        // Kita acak 50/50:
+        if (Math.random() > 0.5) {
+            gameState.players[0].faction = 'noctis';
+            gameState.players[1].faction = 'solaris';
+        }
+
+        // C. RESET VOTES
+        rematchVotes.clear();
+        
+        // State baru (Phase: 'battle', Tick: 0) akan terkirim otomatis
+        // di tick gameLoop berikutnya.
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log(`Client disconnected: ${socket.id}`);
 
     // HAPUS DARI KURSI
     if (sessions[0] === socket.id) sessions[0] = null;
     if (sessions[1] === socket.id) sessions[1] = null;
+
+    if (rematchVotes.has(assignedTeam)) {
+         rematchVotes.delete(assignedTeam);
+         gameState.rematchCount = rematchVotes.size;
+     }
   });
 });
 

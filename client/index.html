@@ -21,16 +21,28 @@
 
   <!-- BOTTOM UI -->
   <div id="game-ui">
-    <div id="bottom-panel">
-      <div id="info-row">
-        <div id="elixir-area">
-          <div class="elixir-bar-bg">
-            <div id="elixir-fill"></div>
-          </div>
-          <div id="elixir-text">5</div>
+    <div id="bottom-panel" class="panel-expanded"> <div id="game-over-screen" class="hidden">
+        <h1 id="go-title">GAME OVER</h1>
+        <p id="go-message">...</p>
+        <div class="go-buttons">
+            <button id="btn-rematch">REMATCH</button>
+            <button id="btn-quit">QUIT</button>
         </div>
+        <p id="rematch-status" class="hidden">0/2 Players Ready</p>
       </div>
-      <div id="hand-cards"></div>
+
+      <div id="game-hud">
+          <div id="info-row">
+            <div id="elixir-area">
+              <div class="elixir-bar-bg">
+                <div id="elixir-fill"></div>
+              </div>
+              <div id="elixir-text">5</div>
+            </div>
+          </div>
+          <div id="hand-cards"></div>
+      </div>
+
     </div>
   </div>
 

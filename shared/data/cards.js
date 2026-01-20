@@ -88,7 +88,7 @@ export const CARDS = {
     description: "Spawns a horde of 5 weak skeletons to overwhelm enemies."
   },
 
-  // [NEW] MELEE AOE (Contoh: Valkyrie)
+  // [NEW] MELEE AOE 
   "vessel_valkyrie": {
     id: "vessel_valkyrie",
     name: "War Maiden",
@@ -108,14 +108,14 @@ export const CARDS = {
     description: "Deals area damage around itself with each attack."
   },
 
-  // [NEW] RANGED AOE (Contoh: Bomber/Wizard)
+  // [NEW] RANGED AOE 
   "vessel_bomber": {
     id: "vessel_bomber",
     name: "Pyromancer",
     type: "VESSEL",
     cost: 5,
     stats: {
-      hp: 300, damage: 100, range: 5.0, sightRange: 7.0, speed: 3.5, attackSpeed: 0.6,
+      hp: 150, damage: 100, range: 5.0, sightRange: 7.0, speed: 3.5, attackSpeed: 0.6,
       deployTime: 1.0, aimTime: 0.5,
       
       // AOE CONFIG
@@ -142,5 +142,81 @@ export const CARDS = {
     },
     description: "Deals massive damage in a small area."
   },
+
+  "vessel_cavalry": {
+    id: "vessel_cavalry",
+    name: "Heavy Cavalry",
+    type: "VESSEL",
+    cost: 5,
+    stats: {
+      hp: 600, damage: 80, range: 1.5, sightRange: 6.0, speed: 4.0, attackSpeed: 1.2,
+      deployTime: 1.0, aimTime: 0.5,
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'any', targetHeight: 'ground',
+      
+      // TRAITS BARU
+      traits: {
+        mounted: true,      // Bisa lewati sungai
+        charge: {
+           enabled: true,
+           windupTime: 2.0, // Harus lari 2 detik baru aktif
+           speedMult: 2.0,  // Speed jadi 2x lipat saat charge
+           damageMult: 2.0  // Damage 2x lipat saat nabrak
+        }
+      }
+    }
+  },
+
+  // 2. ASSASSIN (Jump)
+  "vessel_assassin": {
+    id: "vessel_assassin",
+    name: "Shadow Assassin",
+    type: "VESSEL",
+    cost: 4,
+    stats: {
+      hp: 100, damage: 100, range: 1.0, sightRange: 7.0, speed: 5.0, attackSpeed: 0.8,
+      deployTime: 1.0, aimTime: 0.2,
+      movementType: 'ground',
+      
+      traits: {
+        jump: {
+           enabled: true,
+           range: 12.0,      // Jarak lompat max
+           minRange: 4,   // Gak lompat kalau musuh dekat
+           cooldown: 8.0,   // Tiap 8 detik bisa lompat
+           speed: 30.0,     // Kecepatan terbang saat lompat
+           aoeRadius: 1.5,  // Dampak area saat mendarat
+           damage: 200,       // Damage pendaratan (opsional)
+           windup: 3,         // Diam 0.5 detik sebelum lompat
+           priority: 'farthest' // Prioritas target lompat
+        }
+      }
+    }
+  },
+
+  "vessel_healer_2": {
+    id: "vessel_healer_2",
+    name: "Divine Priest",
+    type: "VESSEL",
+    cost: 4,
+    stats:{
+      hp: 70,
+      damage: -100, // Negative damage = Heal
+      range: 1.0,
+      sightRange: 6.5,
+      speed: 4.0,
+      attackSpeed: 1.0,
+      deployTime: 1.0,
+      aimTime: 0.5,
+      movementType: 'ground',
+      targetTeam: 'ally',
+      targetRule: 'unit_only',
+      targetHeight: 'both',
+
+      aoeRadius: 4.0,     // <--- Radius Putaran
+      aoeType: 'self', 
+    }
+  }
+
   
 };

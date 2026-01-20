@@ -17,7 +17,8 @@ function shuffle(array) {
 // Helper: Buat Deck Starter
 function createStarterDeck() {
   const deck = [
-      "vessel_01", "vessel_02", "vessel_01", "vessel_02", "vessel_siege",
+      "vessel_01", "vessel_02", "vessel_bomber", "vessel_civalry", "vessel_siege",
+      "vessel_swarm", "vessel_assasin", "vessel_healer_2", "vessel_healer", "ritual_01"
   ];
   return shuffle(deck);
 }

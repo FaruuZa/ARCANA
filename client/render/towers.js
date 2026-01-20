@@ -75,6 +75,12 @@ function createTowerVisual(building) {
   
   container.addChild(g);
 
+  // debug: Range Circle
+  const rangeCircle = new PIXI.Graphics();
+  rangeCircle.lineStyle(1, 0xFFFFFF, 0.3); // Putih transparan
+  rangeCircle.drawCircle(0, 0, building.range * _grid.cellSize);
+  container.addChild(rangeCircle);
+
   // HP Bar (Lebih besar dari unit)
   const barW = 40;
   const barH = 8;

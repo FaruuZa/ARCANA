@@ -112,31 +112,20 @@ function updateHand(state) {
 
       // === [FIX BUG UTAMA DI SINI] ===
       cardEl.onclick = () => {
-        if (!_latestState) return;
+        // HAPUS PENGHALANG LOGIC UANG DISINI
+        // Kita ijinkan select, tapi nanti pointer.js yang melarang placement
         
-        // FIX: Ambil arcana milik SAYA (myTeamId), bukan players[0]
-        const myCurrentPlayer = _latestState.players[myTeamId];
-        const freshArcana = myCurrentPlayer ? myCurrentPlayer.arcana : 0;
-
-        // Cek Cost
-        if (freshArcana < cardData.cost) {
-          const costEl = cardEl.querySelector(".card-cost");
-          if (costEl) {
-            costEl.classList.add("shake-cost");
-            setTimeout(() => costEl.classList.remove("shake-cost"), 300);
-          }
-          return; // Gak cukup uang, stop.
-        }
-
         // Logic Pilih Kartu
         selectCard(cardId, index);
         
-        // Update Visual Langsung (biar pop-up / active class muncul)
+        // Update Visual
+        const freshArcana = _latestState ? _latestState.players[myTeamId].arcana : 0;
         refreshCardClasses(hand, freshArcana);
       };
 
       elHand.appendChild(cardEl);
       cardEl.classList.add("entering");
+  
     });
   }
 

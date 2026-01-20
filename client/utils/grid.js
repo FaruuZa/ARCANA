@@ -15,6 +15,9 @@ export function createGrid(app) {
   const boardHeight = cellSize * GRID.rows;
 
   const offsetX = (usableWidth - boardWidth) / 2;
+
+  // const verticalShift = usableHeight * 0.12; 
+  // const offsetY = ((usableHeight - boardHeight) / 2) - verticalShift;
   const offsetY = (usableHeight - boardHeight) / 2;
 
   return {

@@ -9,7 +9,7 @@ export function initProjectiles(app, grid) {
   _app = app;
   _grid = grid;
   const layer = new PIXI.Container();
-  layer.zIndex = 20; // Di atas unit
+  layer.zIndex = 20; 
   app.stage.addChild(layer);
 
   return { layer };
@@ -38,8 +38,6 @@ export function syncProjectiles(projectiles = [], layer) {
       layer.addChild(sprite);
     }
 
-    // Posisi
-    // Kita buat object dummy agar bisa masuk fungsi unitToScreen
     const posData = { row: proj.row, col: proj.col, offsetX: 0, offsetY: 0 };
     const screenPos = unitToScreen(posData, _grid);
 
@@ -51,10 +49,27 @@ export function syncProjectiles(projectiles = [], layer) {
 function createProjectileSprite(proj) {
   const g = new PIXI.Graphics();
   
-  // Warna peluru (Kuning biar kelihatan)
-  g.beginFill(0xFFFF00); 
-  g.drawCircle(0, 0, 5); // Kecil saja
-  g.endFill();
+  // [VISUAL UPDATE] Cek tipe peluru
+  if (proj.type === 'fireball') {
+      // BOLA API (Merah-Oranye)
+      g.beginFill(0xFF4500); // Merah Oranye
+      g.drawCircle(0, 0, 3); 
+      g.endFill();
+      
+      g.beginFill(0xFFFF00); // Inti Kuning
+      g.drawCircle(0, 0, 2);
+      g.endFill();
+  } else if (proj.type === 'cannonball') {
+      // PELURU MERIAM (Hitam Besar)
+      g.beginFill(0x000000);
+      g.drawCircle(0, 0, 3);
+      g.endFill();
+  } else {
+      // PANAH BIASA (Kuning Kecil)
+      g.beginFill(0xFFFF00); 
+      g.drawCircle(0, 0, 2);
+      g.endFill();
+  }
 
   return g;
 }

@@ -28,7 +28,12 @@ export function createUnit(data) {
     movementType: data.movementType || 'ground', // Default ground
     targetTeam: data.targetTeam || 'enemy',      // Default enemy (Penyebab Healer error kemarin)
     targetRule: data.targetRule || 'any',        // Default any (Penyebab Siege error kemarin)
-    targetHeight: data.targetHeight || 'both',   // Default both
+    targetHeight: data.targetHeight || 'both',   // Default both,
+
+    // === OPTIONAL STATS ===
+    aoeRadius: data.aoeRadius || 0,
+    aoeType: data.aoeType || 'target',
+    projectileType: data.projectileType || null,
 
     // Tipe Entity (Penting untuk membedakan Unit vs Building saat filtering)
     entityType: 'unit', 

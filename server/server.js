@@ -38,7 +38,7 @@ setInterval(() => {
     ...gameState, // Copy data game
     timestamp: Date.now(),
   };
-  
+
   io.emit("state", packet);
 }, TICK_RATE);
 
@@ -66,6 +66,9 @@ function processCardUsage(playerState, cardInfo, cardId) {
       "ritual_01",
       "vessel_siege",
       "vessel_healer",
+      "vessel_bomber",
+      "vessel_valkyrie",
+      "vessel_swarm"
     ];
     playerState.deck.sort(() => Math.random() - 0.5);
   }
@@ -75,6 +78,15 @@ function processCardUsage(playerState, cardInfo, cardId) {
   }
 
   return true; // Sukses
+}
+
+function getRandomOffset(radius) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.sqrt(Math.random()) * radius; // Uniform distribution
+    return {
+        x: Math.cos(angle) * dist,
+        y: Math.sin(angle) * dist
+    };
 }
 
 io.on("connection", (socket) => {
@@ -118,25 +130,48 @@ io.on("connection", (socket) => {
     // Proses Pembayaran & Kartu
     if (processCardUsage(playerState, cardInfo, data.cardId)) {
       // Jika sukses bayar -> Spawn Entity
-      spawnUnit(gameState, {
-        cardId: data.cardId,
-        team: assignedTeam,
-        col: data.col,
-        row: data.row,
-        // Stats Unit...
-        hp: cardInfo.stats.hp,
-        damage: cardInfo.stats.damage,
-        range: cardInfo.stats.range,
-        sightRange: cardInfo.stats.sightRange,
-        speed: cardInfo.stats.speed,
-        attackSpeed: cardInfo.stats.attackSpeed,
-        deployTime: cardInfo.stats.deployTime,
-        aimTime: cardInfo.stats.aimTime,
-        movementType: cardInfo.stats.movementType,
-        targetTeam: cardInfo.stats.targetTeam,
-        targetRule: cardInfo.stats.targetRule,
-        targetHeight: cardInfo.stats.targetHeight,
-      });
+
+      const count = cardInfo.stats.count || 1;
+      const spawnRadius = cardInfo.stats.spawnRadius || 0.5;
+      for (let i = 0; i < count; i++) {
+        let finalCol = data.col;
+        let finalRow = data.row;
+
+        // Jika Swarm, beri offset sedikit
+        if (count > 1) {
+          const offset = getRandomOffset(spawnRadius);
+          finalCol += offset.x;
+          finalRow += offset.y;
+
+          // Clamp biar gak keluar map
+          finalCol = Math.max(1, Math.min(17, finalCol));
+          // (Row clamp tergantung team, tapi logic spawnUnit di gameState biasanya handle clamp basic)
+        }
+        spawnUnit(gameState, {
+          cardId: data.cardId,
+          team: assignedTeam,
+          col: finalCol,
+          row: finalRow,
+          // Stats Unit...
+          hp: cardInfo.stats.hp,
+          damage: cardInfo.stats.damage,
+          range: cardInfo.stats.range,
+          sightRange: cardInfo.stats.sightRange,
+          speed: cardInfo.stats.speed,
+          attackSpeed: cardInfo.stats.attackSpeed,
+          deployTime: cardInfo.stats.deployTime,
+          aimTime: cardInfo.stats.aimTime,
+          movementType: cardInfo.stats.movementType,
+          targetTeam: cardInfo.stats.targetTeam,
+          targetRule: cardInfo.stats.targetRule,
+          targetHeight: cardInfo.stats.targetHeight,
+          aoeRadius: cardInfo.stats.aoeRadius || 0,
+          aoeType: cardInfo.stats.aoeType || 'target',
+          projectileType: cardInfo.stats.projectileType || null,
+          count: count,
+          spawnRadius: spawnRadius,
+        });
+      }
     }
   });
 

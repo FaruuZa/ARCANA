@@ -18,7 +18,8 @@ function shuffle(array) {
 function createStarterDeck() {
   const deck = [
       "vessel_01", "vessel_02", "ritual_01", "vessel_siege",
-      "vessel_01", "vessel_healer", "vessel_healer", "ritual_01"
+      "vessel_valkyrie", "vessel_healer", "vessel_swarm",
+      "vessel_bomber"
   ];
   return shuffle(deck);
 }
@@ -33,7 +34,7 @@ export function createGameState() {
     towers.push(createBuilding({
       id: nextId++, team, type, col, row,
       hp: type === 'king' ? 3000 : 1500,
-      range: type === 'king' ? 8.5 : 7.5
+      range: type === 'king' ? 9.5 : 8.5
     }));
   };
 
@@ -107,11 +108,21 @@ export function spawnUnit(state, data) {
         attackSpeed: data.attackSpeed,
         deployTime: data.deployTime,
         aimTime: data.aimTime,
+        count: data.count || 1,
+        spawnRadius: data.spawnRadius || 0.5,
 
+        // Required Stats
         movementType: data.movementType,
-        targetTeam: data.targetTeam,     // <--- Ini yang bikin Healer error
-        targetRule: data.targetRule,     // <--- Ini yang bikin Siege error
-        targetHeight: data.targetHeight
+        targetTeam: data.targetTeam,  
+        targetRule: data.targetRule,  
+        targetHeight: data.targetHeight,
+
+        // Optional Stats
+        aoeRadius: data.aoeRadius || 0,
+        aoeType: data.aoeType || 'target', // 'target' | 'self'
+        projectileType: data.projectileType || null,
+        
+
     });
     
     state.units.push(unit);

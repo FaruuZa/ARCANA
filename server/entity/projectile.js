@@ -16,6 +16,12 @@ export function createProjectile(data) {
     damage: data.damage ?? 10,
     type: data.type ?? 'arrow', // visual type
     
+    // === [FIX WAJIB] ===
+    // Tambahkan properti ini agar ProjectileSystem bisa membacanya!
+    aoeRadius: data.aoeRadius || 0,
+    targetHeight: data.targetHeight || 'both', // Penting untuk AOE filter (misal: Bomb tanah gak kena udara)
+    // ===================
+    
     // State
     hasHit: false
   };

@@ -24,7 +24,7 @@ export const CARDS = {
     type: "VESSEL",
     cost: 4,
     stats: {
-      hp: 60, damage: 30, range: 4.5, sightRange: 6.5, speed: 5.0, attackSpeed: 0.8,
+      hp: 60, damage: 30, range: 4.5, sightRange: 6.5, speed: 5.0, attackSpeed: 1.3,
       deployTime: 1.0, aimTime: 0.8,
       
       // TAMBAHAN WAJIB
@@ -42,7 +42,7 @@ export const CARDS = {
     type: "VESSEL",
     cost: 5,
     stats: {
-      hp: 800, damage: 50, range: 1.0, sightRange: 7.0, speed: 3.0, attackSpeed: 1.5,
+      hp: 800, damage: 50, range: 1.0, sightRange: 7.0, speed: 3.0, attackSpeed: 1,
       deployTime: 2.0, aimTime: 0.5,
 
       // KHUSUS SIEGE: HANYA BANGUNAN
@@ -72,6 +72,61 @@ export const CARDS = {
       targetHeight: 'both'
     }
   },
+  "vessel_swarm": {
+    id: "vessel_swarm",
+    name: "Skeleton Horde",
+    type: "VESSEL",
+    cost: 3,
+    stats: {
+      count: 5,           // <--- ISI 5 UNIT
+      spawnRadius: 1.5,   // <--- SEBARAN SPAWN
+      hp: 40, damage: 10, range: 0.5, sightRange: 5.0, speed: 4.5, attackSpeed: 1.0,
+      deployTime: 1.0, aimTime: 0.1,
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'any', targetHeight: 'ground'
+    },
+    description: "Spawns a horde of 5 weak skeletons to overwhelm enemies."
+  },
+
+  // [NEW] MELEE AOE (Contoh: Valkyrie)
+  "vessel_valkyrie": {
+    id: "vessel_valkyrie",
+    name: "War Maiden",
+    type: "VESSEL",
+    cost: 4,
+    stats: {
+      hp: 900, damage: 70, range: 1.0, sightRange: 5.5, speed: 3.5, attackSpeed: 0.6,
+      deployTime: 1.5, aimTime: 0.3,
+      
+      // AOE CONFIG
+      aoeRadius: 2.0,     // <--- Radius Putaran
+      aoeType: 'self',    // 'self' (Muter di badan sendiri) atau 'target' (Cleave depan)
+      
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'any', targetHeight: 'ground'
+    },
+    description: "Deals area damage around itself with each attack."
+  },
+
+  // [NEW] RANGED AOE (Contoh: Bomber/Wizard)
+  "vessel_bomber": {
+    id: "vessel_bomber",
+    name: "Pyromancer",
+    type: "VESSEL",
+    cost: 5,
+    stats: {
+      hp: 300, damage: 100, range: 5.0, sightRange: 7.0, speed: 3.5, attackSpeed: 0.6,
+      deployTime: 1.0, aimTime: 0.5,
+      
+      // AOE CONFIG
+      aoeRadius: 1.5,     // <--- Radius Ledakan Bola Api
+      projectileType: 'fireball', // Visual
+      
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'any', targetHeight: 'both'
+    },
+    description: "Launches fireballs that explode on impact, dealing area damage."
+  },
   
   // 5. RITUAL CONTOH
   "ritual_01": {
@@ -86,5 +141,6 @@ export const CARDS = {
       delay: 0.5
     },
     description: "Deals massive damage in a small area."
-  }
+  },
+  
 };

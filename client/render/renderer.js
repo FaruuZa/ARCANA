@@ -1,5 +1,6 @@
 import { initBoard } from "./board.js";
 import { initTowers } from "./towers.js";
+import { initGhost } from "./ghost.js";
 import { initUnits, syncUnits } from "./units.js";
 import { initEffects, syncEffects} from "./effects.js";
 import {initProjectiles, syncProjectiles} from "./projectiles.js";
@@ -12,6 +13,8 @@ export function initRenderer(app) {
 
   initBoard(app, grid);
   initTowers(app, grid);
+  initGhost(app, grid);
+  
 
   const unitSystem = initUnits(app, grid);
   const projSystem = initProjectiles(app, grid);

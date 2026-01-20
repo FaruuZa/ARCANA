@@ -1,5 +1,6 @@
 import { distance } from "../utils/math.js";
 import { createProjectile } from "../entity/projectile.js";
+import { dealAreaDamage } from "../utils/combat.js";
 
 export function updateAttacks(gameState, dt) {
   const units = gameState.units;
@@ -74,10 +75,11 @@ export function updateAttacks(gameState, dt) {
 
 function performAttack(unit, target, gameState) {
     if (unit.attackCooldown <= 0) {
-        // [LOGIC ATTACK]
+        
         const isRanged = unit.range > 2.0;
 
         if (isRanged) {
+            // [RANGED ATTACK]
             const proj = createProjectile({
                 id: gameState.nextEntityId++,
                 ownerId: unit.id,
@@ -87,16 +89,58 @@ function performAttack(unit, target, gameState) {
                 col: unit.col,
                 row: unit.row,
                 speed: 10.0,
-                type: 'arrow'
+                type: unit.projectileType || 'arrow', // Custom visual
+                
+                // Pass Data AOE ke Projectile
+                aoeRadius: unit.aoeRadius || 0,
+                targetHeight: unit.targetHeight // Projectile mewarisi rule target unit
             });
             gameState.projectiles.push(proj);
+
         } else {
-            target.hp -= unit.damage;
+            // [MELEE ATTACK]
+            
+            if (unit.aoeRadius > 0) {
+                // === MELEE AOE LOGIC ===
+                
+                if (unit.aoeType === 'self') {
+                    // Tipe VALKYRIE: Muter di tempat
+                    dealAreaDamage(gameState, unit, unit.aoeRadius, unit.damage, unit.team, unit.targetHeight);
+                    
+                    // [NEW] VISUAL EFEK PUTARAN (SPIN)
+                    gameState.effects.push({
+                        id: gameState.nextEntityId++,
+                        type: 'spin', // Tipe visual baru
+                        col: unit.col,
+                        row: unit.row,
+                        radius: unit.aoeRadius,
+                        duration: 0.3, // Cepat (0.3 detik)
+                        time: 0.3
+                    });
+
+                } else {
+                    // Tipe CLEAVE/SLAM: Hantam target
+                    dealAreaDamage(gameState, target, unit.aoeRadius, unit.damage, unit.team, unit.targetHeight);
+                    
+                    // [NEW] VISUAL EFEK HANTAMAN (SLAM)
+                    gameState.effects.push({
+                        id: gameState.nextEntityId++,
+                        type: 'shockwave', // Tipe visual baru
+                        col: target.col, // Efek muncul di musuh
+                        row: target.row,
+                        radius: unit.aoeRadius,
+                        duration: 0.2,
+                        time: 0.2
+                    });
+                }
+
+            } else {
+                // SINGLE TARGET MELEE (Biasa)
+                target.hp -= unit.damage;
+            }
         }
 
-        // Reset Cooldown
         unit.attackCooldown = 1.0 / unit.attackSpeed;
-        
     }
 }
 

@@ -1,0 +1,206 @@
+ARCANA
+DUAL FACTION REAL-TIME CARD STRATEGY
+FINAL DESIGN DOCUMENTATION
+===================================
+
+
+1. VISI UTAMA
+-------------
+ARCANA adalah real-time strategy card game dengan tema tarot dan arcane.
+Game ini secara sadar meninggalkan pendekatan “clone Clash Royale”
+dan membangun identitas berbasis TAKDIR, RITUAL, dan ASIMETRI.
+
+Pemain tidak sekadar memainkan kartu.
+Pemain membaca tanda, menerima takdir,
+dan memanggil kekuatan Arcana ke medan pertempuran.
+
+
+2. PRINSIP DESAIN INTI
+---------------------
+- Takdir diberikan, bukan dipilih
+- Asymmetric tapi fair
+- Identitas lebih penting daripada angka
+- Setiap match harus terasa berbeda
+- Tidak ada best deck universal
+
+
+3. SISTEM FAKSI
+---------------
+Setiap match menggunakan sistem RANDOM FACTION.
+
+- Player tidak memilih faksi
+- Faksi ditentukan di awal match
+- Deck yang tersedia hanya milik faksi tersebut
+
+Sistem ini adalah pilar identitas ARCANA.
+
+“Di Arcana, faksi tidak dipilih. Takdir yang menentukan.”
+
+
+4. STATUS FAKSI
+----------------
+
+FAKSI AKTIF (LAUNCH):
+- Arcana Solaris
+- Arcana Noctis
+
+FAKSI UPCOMING (BELUM AKTIF):
+- Arcana Mortis
+- Arcana Chronis
+
+Faksi upcoming sudah ada dalam lore dan dunia,
+namun belum bisa dimainkan.
+
+
+5. DESKRIPSI FAKSI
+------------------
+
+A. ARCANA SOLARIS
+Julukan     : The Order of Fate
+Tema        : Cahaya, keteraturan, takdir
+Filosofi   : Takdir sudah tertulis. Kemenangan adalah soal eksekusi.
+
+Gameplay Identity:
+- Stabil
+- Defensive
+- Scaling jangka panjang
+- Kontrol area
+- Forgiving terhadap kesalahan
+
+Visual Identity:
+- Warna emas, putih, biru muda
+- Simbol matahari dan sigil simetris
+- Board bersih dan bercahaya
+
+
+B. ARCANA NOCTIS
+Julukan     : The Cult of Broken Fate
+Tema        : Bayangan, chaos, kebebasan
+Filosofi   : Takdir bisa disobek.
+
+Gameplay Identity:
+- Agresif
+- Burst damage
+- Swarm
+- High risk, high reward
+- Menghukum kesalahan lawan
+
+Visual Identity:
+- Warna hitam, ungu, merah gelap
+- Simbol bulan, duri, sigil patah
+- Board gelap dan organik
+
+
+C. ARCANA MORTIS (UPCOMING)
+Tema        : Kematian, pengorbanan, aftermath
+Filosofi   : Kematian bukan akhir, melainkan sumber.
+
+Gameplay Identity:
+- Death trigger
+- Value dari unit mati
+- Scaling melalui kehilangan
+
+Status     : Tidak aktif
+
+
+D. ARCANA CHRONIS (UPCOMING)
+Tema        : Waktu, prediksi, manipulasi
+Filosofi   : Jika satu takdir gagal, ulangi.
+
+Gameplay Identity:
+- Delay
+- Reposition
+- Kontrol waktu mikro
+
+Status     : Tidak aktif
+
+
+6. JENIS KARTU
+--------------
+Semua kartu direpresentasikan sebagai kartu tarot.
+
+Jenis kartu resmi:
+
+- VESSEL   : Unit yang dipanggil ke arena
+- RITUAL   : Efek instan atau berdurasi
+- SANCTUM  : Struktur permanen / semi permanen
+
+Istilah ini bersifat final dan digunakan di seluruh sistem.
+
+
+7. STRUKTUR KARTU TAROT
+-----------------------
+Setiap kartu memiliki elemen:
+
+- Nama Arcana
+- Ilustrasi simbolik
+- Jenis kartu (Vessel / Ritual / Sanctum)
+- Arcana Cost
+- Deskripsi bernuansa ritual (lore + fungsi)
+
+
+8. SISTEM HAND
+--------------
+Hand pemain ditampilkan sebagai tumpukan kartu (fanned hand),
+bukan slot lurus.
+
+Tujuan desain:
+- Meniru rasa bermain kartu klasik
+- Mengurangi kesan UI game mobile generik
+- Menekankan pilihan, bukan spam
+
+
+9. RESOURCE: ARCANA
+-------------------
+Arcana adalah energi mistik yang mengalir seiring waktu.
+
+- Digunakan untuk memainkan kartu
+- Direpresentasikan secara visual (glyph, flow, sigil)
+
+Perbedaan rasa:
+- Arcana Solaris: stabil, konstan
+- Arcana Noctis : fluktuatif, eksplosif
+
+
+10. SISTEM BOARD
+----------------
+Arena adalah satu medan pertempuran,
+namun secara visual terbagi dua sesuai faksi masing-masing pemain.
+
+- Sisi Solaris: marmer bercahaya, struktur simetris
+- Sisi Noctis : batu retak, bayangan, struktur organik
+
+Bagian tengah adalah zona netral
+tempat dua takdir bertabrakan.
+
+
+11. MATCH FLOW
+--------------
+1. Match dimulai
+2. Sistem mengundi faksi tiap player
+3. Deck faksi terkait tersedia
+4. Battle real-time dimulai
+5. Pemain memainkan kartu menggunakan Arcana
+6. Tujuan akhir: menghancurkan struktur utama lawan
+
+
+12. BALANCING PHILOSOPHY
+------------------------
+- Setiap kartu memiliki satu peran utama
+- Hard counter wajib ada
+- Tidak ada kartu serba bisa
+- Asymmetric design adalah fitur, bukan masalah
+
+Identitas mengalahkan statistik.
+
+
+13. TARGET EXPERIENCE
+---------------------
+Pemain harus merasa:
+
+"Aku sedang membaca dan memanipulasi takdir,
+bukan sekadar memainkan kartu."
+
+
+===================================
+END OF FINAL DOCUMENTATION

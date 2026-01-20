@@ -17,8 +17,7 @@ function shuffle(array) {
 // Helper: Buat Deck Starter
 function createStarterDeck() {
   const deck = [
-      "vessel_01", "vessel_02", "vessel_bomber", "vessel_civalry", "vessel_siege",
-      "vessel_swarm", "vessel_assasin", "vessel_healer_2", "vessel_healer", "ritual_01"
+      "vessel_silencer", "vessel_assassin", "ritual_gigantify", "ritual_gigantify", "ritual_root", "ritual_warcry", "vessel_hammer", "vessel_frost_archer"
   ];
   return shuffle(deck);
 }
@@ -49,7 +48,7 @@ export function createGameState() {
   [0, 1].forEach(team => {
       const fullDeck = createStarterDeck();
       
-      // Ambil 4 kartu pertama sebagai Hand
+      // Ambil 6 kartu pertama sebagai Hand
       const hand = fullDeck.splice(0, 5);
       
       // Ambil 1 kartu berikutnya sebagai Next
@@ -64,7 +63,8 @@ export function createGameState() {
         // State Kartu Baru
         deck: fullDeck, 
         hand: hand,     
-        next: nextCard  
+        next: nextCard,
+        connected: false,
       };
   });
 

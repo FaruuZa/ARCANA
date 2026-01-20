@@ -1,0 +1,201 @@
+ARCANA – PROJECT CONTEXT & DEVELOPMENT CONTRACT
+===============================================
+
+TUJUAN PROYEK
+-------------
+ARCANA adalah game PvP real-time berbasis kartu, terinspirasi oleh Clash Royale,
+namun dengan identitas sendiri:
+
+- Tema Arcana / Tarot
+- Resource: Arcana (bukan Elixir)
+- Jenis kartu:
+  - Vessel   = Unit
+  - Ritual   = Spell
+  - Sanctum  = Building
+- Faksi berbeda dengan kartu & board visual berbeda
+- Gameplay lane-based, top-down (bukan side-view, bukan platformer)
+
+Game ini ditujukan untuk:
+- Mobile-first
+- Online multiplayer (socket-based)
+- Arsitektur server-authoritative
+
+
+PRINSIP DESAIN UTAMA
+-------------------
+1. SERVER ADALAH OTORITAS
+   - Semua logic gameplay terjadi di server
+   - Client hanya render & input
+
+2. CLIENT TIDAK MEMILIKI LOGIC GAMEPLAY
+   - Tidak ada targeting
+   - Tidak ada damage
+   - Tidak ada movement logic
+   - Hanya visual & preview
+
+3. SISTEM DIPISAH, BUKAN MONOLIT
+   - Movement, targeting, attack, cleanup adalah SYSTEM terpisah
+   - Tidak ada “unitSystem serba bisa”
+
+4. GRID ADALAH LOGICAL, BUKAN TILE
+   - Grid dipakai untuk konsistensi skala & layout
+   - Bukan pathfinding
+   - Lane-based movement tetap dipertahankan
+
+5. STRUKTUR FILE TIDAK BOLEH BERUBAH TANPA ALASAN
+   - Perubahan struktur = keputusan desain, bukan improvisasi
+
+
+STRUKTUR FINAL (DISEPAKATI)
+---------------------------
+
+ROOT
+----
+ARCANA/
+├── client/
+├── server/
+├── shared/
+└── package.json
+
+
+CLIENT (VIEW + INPUT ONLY)
+-------------------------
+client/
+├── index.html
+├── main.js
+├── style.css
+
+├── net/
+│   └── socket.js
+│   - Alasan: isolasi komunikasi network
+
+├── state/
+│   └── gameState.js
+│   - Alasan: single source of truth client-side (read-only mirror)
+
+├── input/
+│   └── pointer.js
+│   - Alasan: semua input disentralisasi
+
+├── render/
+│   ├── renderer.js
+│   ├── board.js
+│   ├── units.js
+│   ├── towers.js
+│   ├── effects.js
+│   ├── hand.js
+│   └── themes/
+│       ├── baseTheme.js
+│       ├── noctis.js
+│       └── solaris.js
+│   - Alasan: visual modular, faction/theme-based
+
+├── rules/
+│   └── placement.js
+│   - Alasan: hanya PREVIEW & validasi UI, bukan gameplay rule
+
+├── data/
+│   ├── cards.js
+│   └── factions.js
+│   - Alasan: client perlu metadata untuk UI
+
+└── utils/
+    ├── grid.js
+    ├── math.js
+    └── utils.js
+
+
+SERVER (GAMEPLAY AUTHORITY)
+--------------------------
+server/
+├── server.js
+│   - Socket, room, player management
+
+├── gameLoop.js
+│   - Satu-satunya tempat tick/update dipanggil
+
+├── gameState.js
+│   - createGameState()
+│   - Tidak ada logic di sini
+
+├── systems/
+│   ├── movementSystem.js
+│   ├── targetingSystem.js
+│   ├── attackSystem.js
+│   ├── projectileSystem.js
+│   └── cleanupSystem.js
+│   - Alasan: ECS-lite, logic terpisah & testable
+
+├── entity/
+│   ├── unit.js
+│   ├── building.js
+│   └── projectile.js
+│   - Alasan: hanya DATA SHAPE, bukan behavior
+
+├── rules/
+│   └── placement.js
+│   - Alasan: server-side validation
+
+├── data/
+│   ├── cards.js
+│   ├── factions.js
+│   └── balance.js
+
+└── utils/
+    └── math.js
+
+
+SHARED (KONTRAK)
+----------------
+shared/
+├── constants.js
+├── enums.js
+└── rules.js
+
+Digunakan untuk:
+- enum lane
+- enum cardType
+- ukuran grid logical
+- rule yang HARUS sama antara client & server
+
+
+ATURAN PENTING SAAT MENAMBAH FILE BARU
+-------------------------------------
+Setiap file baru WAJIB memenuhi salah satu kondisi berikut:
+
+1. Memecah tanggung jawab yang sebelumnya terlalu besar
+2. Digunakan oleh lebih dari satu modul
+3. Dibutuhkan untuk mencegah coupling silang
+4. Meningkatkan keterbacaan & maintainability
+
+Jika file baru dibuat:
+- HARUS disebutkan alasan kenapa file lama tidak dipakai
+- HARUS jelas masuk kategori: render / system / data / utils
+
+
+KONTEKS GAMEPLAY (YANG TIDAK BOLEH BERUBAH)
+------------------------------------------
+- Game adalah lane-based seperti Clash Royale
+- Tower musuh di atas, tower player di bawah
+- Unit spawn di lane (player memilih lane)
+- Unit bergerak menuju tower musuh
+- Unit berhenti saat target dalam range
+- Melee tidak menembak
+- Ranged bisa menyerang lintas lane TANPA pindah lane
+- Lane adalah jalur strategis, bukan tile grid
+
+KONTRAK KERJA DENGAN ASSISTANT
+------------------------------
+Assistant WAJIB:
+- Mengikuti struktur ini
+- Menyebutkan nama file sebelum menjelaskan perubahan
+- Menjelaskan ALASAN jika membuat file baru
+- Tidak mengubah arah game tanpa diskusi
+- Tidak mengasumsikan engine lain (Unity, Godot, dll)
+
+Jika konteks mulai menyimpang:
+- Kembali ke dokumen ini
+- Struktur & prinsip di sini yang diutamakan
+
+END OF DOCUMENT
+===============================================

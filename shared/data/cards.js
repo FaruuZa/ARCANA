@@ -24,8 +24,8 @@ export const CARDS = {
     type: "VESSEL",
     cost: 4,
     stats: {
-      hp: 60, damage: 30, range: 4.5, sightRange: 6.5, speed: 5.0, attackSpeed: 1.3,
-      deployTime: 1.0, aimTime: 0.8,
+      hp: 60, damage: 30, range: 4.5, sightRange: 6.5, speed: 5.0, attackSpeed: 1.5,
+      deployTime: 1.0, aimTime: 0.8, count: 2, spawnRadius: 1,
       
       // TAMBAHAN WAJIB
       movementType: 'ground',
@@ -61,8 +61,8 @@ export const CARDS = {
     cost: 4,
     stats: {
       hp: 100, 
-      damage: -20, // Negative damage = Heal
-      range: 4.0, sightRange: 6.0, speed: 4.5, attackSpeed: 1.2,
+      damage: -70, // Negative damage = Heal
+      range: 4.0, sightRange: 6.0, speed: 4.5, attackSpeed: 0.8,
       deployTime: 1.0, aimTime: 0.5,
 
       // KHUSUS HEALER: TARGET TEMAN
@@ -79,8 +79,8 @@ export const CARDS = {
     cost: 3,
     stats: {
       count: 5,           // <--- ISI 5 UNIT
-      spawnRadius: 1.5,   // <--- SEBARAN SPAWN
-      hp: 40, damage: 10, range: 0.5, sightRange: 5.0, speed: 4.5, attackSpeed: 1.0,
+      spawnRadius: 2,   // <--- SEBARAN SPAWN
+      hp: 40, damage: 10, range: 1, sightRange: 5.0, speed: 4.5, attackSpeed: 1.0,
       deployTime: 1.0, aimTime: 0.1,
       movementType: 'ground',
       targetTeam: 'enemy', targetRule: 'any', targetHeight: 'ground'
@@ -181,20 +181,20 @@ export const CARDS = {
       traits: {
         jump: {
            enabled: true,
-           range: 12.0,      // Jarak lompat max
+           range: 10.0,      // Jarak lompat max
            minRange: 4,   // Gak lompat kalau musuh dekat
            cooldown: 8.0,   // Tiap 8 detik bisa lompat
            speed: 30.0,     // Kecepatan terbang saat lompat
            aoeRadius: 1.5,  // Dampak area saat mendarat
            damage: 200,       // Damage pendaratan (opsional)
-           windup: 3,         // Diam 0.5 detik sebelum lompat
+           windup: 1,         // Diam 0.5 detik sebelum lompat
            priority: 'farthest' // Prioritas target lompat
         }
       }
     }
   },
 
-  "vessel_healer_2": {
+  "vessel_healer_2": {  
     id: "vessel_healer_2",
     name: "Divine Priest",
     type: "VESSEL",
@@ -202,7 +202,7 @@ export const CARDS = {
     stats:{
       hp: 70,
       damage: -100, // Negative damage = Heal
-      range: 1.0,
+      range: 2.0,
       sightRange: 6.5,
       speed: 4.0,
       attackSpeed: 1.0,
@@ -213,10 +213,134 @@ export const CARDS = {
       targetRule: 'unit_only',
       targetHeight: 'both',
 
-      aoeRadius: 4.0,     // <--- Radius Putaran
+      aoeRadius: 2.0,     // <--- Radius Putaran
       aoeType: 'self', 
     }
-  }
+  },
+  "vessel_frost_archer": {
+    id: "vessel_frost_archer",
+    name: "Frost Archer",
+    type: "VESSEL",
+    cost: 4,
+    stats: {
+      hp: 120, damage: 10, range: 5.0, sightRange: 7.0, speed: 4.0, attackSpeed: 1.1,
+      deployTime: 1.0, aimTime: 0.3,
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'any', targetHeight: 'both',
+      projectileType: 'arrow_ice', // Pastikan aset visual ada, atau fallback ke arrow
+      
+      traits: {
+        freezeOnHit: true // <--- Flag untuk Logic Attack
+      }
+    },
+    description: "Attacks slow enemy movement and attack speed."
+  },
+
+  // CONTOH 2: HAMMER DWARF (Stun Effect)
+  "vessel_hammer": {
+    id: "vessel_hammer",
+    name: "Storm Hammer",
+    type: "VESSEL",
+    cost: 5,
+    stats: {
+      hp: 800, damage: 10, range: 1.0, sightRange: 5.0, speed: 3.0, attackSpeed: 0.7,
+      deployTime: 1.5, aimTime: 0.4,
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'any', targetHeight: 'ground',
+      
+      traits: {
+        stunOnHit: true,    // <--- Flag Stun
+        stunDuration: 1.0   // Durasi stun
+      }
+    },
+    description: "Heavy attacks have a chance to stun enemies."
+  },
+
+  // CONTOH 3: WAR CRY (Buff Ritual)
+  "ritual_warcry": {
+    id: "ritual_warcry",
+    name: "War Cry",
+    type: "RITUAL",
+    cost: 3,
+    spellData: {
+      type: "buff_area",      
+      radius: 3.5,
+      targetTeam: 'ally',   // Target TEMAN
+      buffs: [
+        { type: 'speed_mult', value: 1.5, duration: 5.0 },       // Lari 1.5x
+        { type: 'attack_speed_mult', value: 1.4, duration: 5.0 } // Serang 1.4x
+      ]
+    },
+    description: "Enrages nearby allies, increasing movement and attack speed."
+  },
+
+  "ritual_root": {
+    id: "ritual_root",
+    name: "Nature's Grasp",
+    type: "RITUAL",
+    cost: 3,
+    spellData: {
+      type: "buff_area",    // Kita pakai sistem buff_area yang sudah dibuat
+      radius: 3.0,
+      targetTeam: 'enemy',  // Target MUSUH
+      buffs: [
+        { type: 'root', value: 1, duration: 4.0 } // ROOT selama 4 detik
+      ]
+    },
+    description: "ROOTS all enemies in an area for 4s. They cannot move."
+  },
+
+  // Mekanisme: Serangan memberi debuff Silence, mencegah musuh pakai skill (lompat/charge).
+  "vessel_silencer": {
+    id: "vessel_silencer",
+    name: "Witch Hunter",
+    type: "VESSEL",
+    cost: 4,
+    stats: {
+      hp: 350, damage: 45, range: 5.5, sightRange: 7.0, speed: 4.5, attackSpeed: 1.1,
+      deployTime: 1.0, aimTime: 0.2,
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'any', targetHeight: 'both',
+      projectileType: 'arrow_purple', // Asumsi ada visual ini
+
+      traits: {
+        silenceOnHit: true,     // <--- Logic Silence
+        silenceDuration: 3.0    // Silence 3 detik
+      }
+    },
+    description: "Attacks SILENCE enemies, preventing ability usage."
+  },
+
+  "ritual_gigantify": {
+    id: "ritual_gigantify",
+    name: "Titan's Growth",
+    type: "RITUAL",
+    cost: 4,
+    spellData: {
+      type: "buff_area",
+      radius: 3.0,
+      targetTeam: 'ally',
+      buffs: [
+        { 
+            type: 'scale_mult', 
+            value: 1.5,      // Jadi 1.5x lebih besar
+            duration: 8.0 
+        },
+        { 
+            type: 'damage_mult', 
+            value: 1.5,      // Damage juga naik
+            duration: 8.0 
+        },
+        {
+            type: 'speed_mult', // Opsional: Jadi lambat karena berat
+            value: 0.8,
+            duration: 8.0
+        }
+      ]
+    },
+    description: "Make allies GIANT! Increases size and damage by 50%."
+}
+  
 
   
 };

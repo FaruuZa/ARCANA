@@ -207,7 +207,7 @@ canvas {
   
   transform-origin: center 150%;
   transform: translateX(calc(-50% + var(--x))) rotate(var(--rot)) translateY(var(--y));
-  transition: transform 0.2s, border-color 0.2s;
+  transition: transform 0.2s, border-color 0.2s, opacity 0.2s; /* [FIX] Tambah opacity transition */
   cursor: pointer;
 
   touch-action: none; 
@@ -220,15 +220,34 @@ canvas {
   transform: translateX(calc(-50% + var(--x))) rotate(var(--rot)) scale(1);
 }
 
+/* [NEW] Dragging State */
+.hand-card.dragging {
+  transition: transform 0s !important; /* [FIX] Hanya matikan transform, biarkan opacity transisi */
+  z-index: 100 !important;
+  pointer-events: none; /* Biar event tembus ke canvas saat drag */
+}
+
 .hand-card.active {
   z-index: 20;
   border-color: var(--arcana-glow);
   box-shadow: 0 0 20px var(--arcana-purple);
-  transform: translateX(-50%) translateY(-20px) scale(1.2) !important;
+  transform: translateX(-50%) translateY(-20px) scale(1.2); /* Hapus !important agar bisa di-drag */
+}
+
+.hand-card.active.disabled {
+  border-color: #555 !important; /* Timpa warna ungu */
+  box-shadow: none !important;   /* Hilangkan glow ungu */
+  transform: translateX(-50%) translateY(-40px) scale(1.2); /* Hapus !important */
+  filter: grayscale(1) brightness(0.8); /* Tetap gelap */
 }
 
 .hand-card.disabled {
   filter: grayscale(1);
+}
+
+.hand-card.disabled .card-cost {
+  color: #ff4444; 
+  text-shadow: 0 0 2px black;
 }
 
 .card-cost {
@@ -243,6 +262,25 @@ canvas {
 .card-type {
   font-size: 8px; color: #666; writing-mode: vertical-rl;
   position: absolute; left: 4px; top: 10px; bottom: 10px;
+}
+
+/* [NEW] Deploy Animation (Terbang ke atas & Fade out) */
+@keyframes deploy-anim {
+  0% { transform: translateX(-50%) translateY(-40px) scale(1.2); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-150px) scale(0.8); opacity: 0; }
+}
+.hand-card.deploying {
+  animation: deploy-anim 0.4s forwards ease-out;
+  pointer-events: none;
+}
+
+/* [NEW] Entering Animation (Masuk dari bawah) */
+@keyframes card-enter {
+  from { transform: translateX(calc(-50% + var(--x))) translateY(100px) rotate(0deg); opacity: 0; }
+  to { opacity: 1; }
+}
+.hand-card.entering {
+  animation: card-enter 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 /* --- ANIMATION --- */
@@ -347,4 +385,80 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   filter: grayscale(1);
+}
+
+/* ... css lainnya ... */
+
+/* --- TOAST NOTIFICATIONS --- */
+#toast-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1000;
+  pointer-events: none; /* Biar tembus klik ke game */
+}
+
+.toast {
+  background: rgba(15, 15, 20, 0.95);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 4px;
+  border-left: 4px solid var(--gold);
+  font-family: var(--font-body);
+  font-size: 14px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  
+  opacity: 0;
+  transform: translateX(50px);
+  animation: toast-in 0.3s forwards;
+  pointer-events: auto;
+}
+
+.toast.error { border-left-color: #ff4444; }
+.toast.success { border-left-color: #00C851; }
+
+@keyframes toast-in {
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toast-out {
+  to { opacity: 0; transform: translateX(50px); }
+}
+
+/* --- SPECTATOR JOIN BUTTON --- */
+.spectator-join-btn {
+  background: var(--gold);
+  color: #000;
+  border: none;
+  padding: 10px 20px;
+  font-family: var(--font-title);
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+  border-radius: 4px;
+  box-shadow: 0 0 10px var(--gold-dim);
+  transition: all 0.2s;
+  pointer-events: auto; /* Penting karena panel spectator biasanya pointer-events: none */
+}
+
+.spectator-join-btn:hover {
+  background: #fff;
+  transform: scale(1.05);
+}
+
+.spectator-hud-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+}
+
+.spectator-status-text {
+  color: #aaa;
+  font-size: 14px;
+  font-style: italic;
 }

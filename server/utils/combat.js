@@ -1,7 +1,29 @@
 import { distance } from "./math.js";
 
-// Fungsi AOE Generic
-export function dealAreaDamage(gameState, origin, radius, damage, attackerTeam, targetHeight = 'both', targetRule = 'enemy') {
+// [NEW] Helper Apply Buff (Export agar bisa dipanggil projectileSystem)
+export function applyBuff(target, buffData) {
+    if (!target || target.hp <= 0) return;
+    if (!target.buffs) target.buffs = [];
+
+    // Cek Stacking (Refresh duration jika nama sama)
+    const existingBuff = target.buffs.find(b => b.name === buffData.name);
+
+    if (existingBuff) {
+        existingBuff.duration = Math.max(existingBuff.duration, buffData.duration);
+    } else {
+        target.buffs.push({
+            name: buffData.name || buffData.type,
+            type: buffData.type,
+            value: buffData.value,
+            duration: buffData.duration,
+            sourceId: buffData.sourceId,
+            tickTimer: 0 
+        });
+    }
+}
+
+// [UPDATE] Tambahkan parameter 'onHitEffects' (Default kosong)
+export function dealAreaDamage(gameState, origin, radius, damage, attackerTeam, targetHeight = 'both', targetRule = 'enemy', onHitEffects = []) {
     const units = gameState.units;
     const buildings = gameState.buildings;
     const allEntities = [...units, ...buildings];
@@ -11,22 +33,15 @@ export function dealAreaDamage(gameState, origin, radius, damage, attackerTeam, 
     for (const entity of allEntities) {
         if (entity.hp <= 0) continue;
         
-        // === [FIX] LOGIC TARGETING BARU (BOTH / ALLY / ENEMY) ===
+        // Logic Targeting (Ally/Enemy/Both)
         let isTeamValid = false;
-        
-        if (targetRule === 'both') {
-            isTeamValid = true; // Hajar semua (termasuk teman)
-        } else if (targetRule === 'ally') {
-            isTeamValid = (entity.team === attackerTeam); // Hanya teman
-        } else {
-            // Default: 'enemy'
-            isTeamValid = (entity.team !== attackerTeam); // Hanya musuh
-        }
+        if (targetRule === 'both') isTeamValid = true;
+        else if (targetRule === 'ally') isTeamValid = (entity.team === attackerTeam);
+        else isTeamValid = (entity.team !== attackerTeam);
 
         if (!isTeamValid) continue;
-        // ========================================================
 
-        // 1. Cek Jarak (Circle Collision)
+        // 1. Cek Jarak
         const dist = distance(origin, entity);
         
         if (dist <= radius + 0.5) {
@@ -38,12 +53,16 @@ export function dealAreaDamage(gameState, origin, radius, damage, attackerTeam, 
             if (targetHeight === 'air' && entMoveType !== 'flying') isValid = false;
 
             if (isValid) {
-                if((entity.hp - damage) >= entity.maxHp){
-                    entity.hp = entity.maxHp;
-                } else {
-                    entity.hp = Math.max(0, entity.hp - damage);
-                }
+                // DEAL DAMAGE
+                entity.hp -= damage;
                 hitCount++;
+
+                // [NEW] APPLY BUFFS TO AREA VICTIM
+                if (onHitEffects && onHitEffects.length > 0) {
+                    onHitEffects.forEach(buff => {
+                        applyBuff(entity, buff);
+                    });
+                }
             }
         }
     }

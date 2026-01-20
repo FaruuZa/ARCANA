@@ -1,46 +1,98 @@
 import { distance } from "../utils/math.js";
+import { dealAreaDamage, applyBuff } from "../utils/combat.js";
+import { CARDS } from "../../shared/data/cards.js";
 
-export function castRitual(gameState, data) {
-    const { team, col, row, spellData } = data;
+export function castRitual(gameState, playerId, teamId, cardId, targetPos) {
+    const card = CARDS[cardId];
+    if (!card || card.type !== 'RITUAL') return;
 
-    console.log(`🔥 RITUAL CAST: Team ${team} at [${col}, ${row}]`);
+    const spell = card.spellData;
 
-    // Tipe 1: INSTANT DAMAGE AOE
-    if (spellData.type === "damage_aoe") {
+    // --- TIPE 1: INSTANT DAMAGE AREA (Fireball, Zap) ---
+    if (spell.type === "damage_aoe") {
         
-        // Cari semua unit yang kena (Friendly Fire? Biasanya tidak di game gacha)
-        // Kita asumsi HANYA kena musuh.
-        
-        const targets = [...gameState.units, ...gameState.buildings];
-        let hitCount = 0;
+        dealAreaDamage(
+            gameState,
+            targetPos,     // Origin {col, row}
+            spell.radius, 
+            spell.damage, 
+            teamId, 
+            'both',        // Hit ground & air
+            'enemy'        // Hit musuh saja
+        );
 
-        targets.forEach(entity => {
-            if (entity.hp <= 0) return;
-            if (entity.team === team) return; // Jangan sakiti teman sendiri
-
-            // Cek Jarak (Circle Collision)
-            const dx = entity.col - col;
-            const dy = entity.row - row;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-
-            if (dist <= spellData.radius) {
-                // KENA!
-                entity.hp -= spellData.damage;
-                hitCount++;
-                console.log(`   -> Hit ${entity.id} for ${spellData.damage} dmg!`);
-            }
-            
-        });
-
+        // Visual Effect
         gameState.effects.push({
-            id: gameState.nextEntityId++, // Tetap butuh ID unik biar client bisa track
-            type: "explosion",
-            col: col,
-            row: row,
-            radius: spellData.radius,
-            duration: 0.5, // Efek bertahan 0.5 detik di layar
-            time: 0.5      // Timer hitung mundur
+            id: gameState.nextEntityId++,
+            type: "explosion", // Pastikan ada di client renderer
+            col: targetPos.col,
+            row: targetPos.row,
+            radius: spell.radius,
+            duration: 0.5,
+            time: 0.5
+        });
+    }
+
+    // --- TIPE 2: BUFF AREA (War Cry, Healing Totem) ---
+    else if (spell.type === "buff_area") {
+        
+        const entities = [...gameState.units, ...gameState.buildings];
+        
+        entities.forEach(entity => {
+            if (entity.hp <= 0) return;
+
+            // Filter Target (Ally/Enemy)
+            let isValid = false;
+            if (spell.targetTeam === 'ally' && entity.team === teamId) isValid = true;
+            if (spell.targetTeam === 'enemy' && entity.team !== teamId) isValid = true;
+
+            if (!isValid) return;
+
+            // Cek Jarak dari pusat klik
+            if (distance(targetPos, entity) <= spell.radius) {
+                
+                // Terapkan Semua Buff
+                if (spell.buffs) {
+                    spell.buffs.forEach(buffConfig => {
+                        applyBuff(entity, {
+                            name: card.name + "_" + buffConfig.type, 
+                            type: buffConfig.type,
+                            value: buffConfig.value,
+                            duration: buffConfig.duration,
+                            sourceId: playerId
+                        });
+                    });
+                }
+                
+                // Visual Effect Individual (Pada Unit)
+                gameState.effects.push({
+                    id: gameState.nextEntityId++,
+                    type: "buff_shine", 
+                    col: entity.col,
+                    row: entity.row,
+                    radius: 0.5,
+                    duration: 0.5,
+                    time: 0.5
+                });
+            }
         });
 
+        // Visual Effect Area (Lingkaran Tanah)
+        gameState.effects.push({
+            id: gameState.nextEntityId++,
+            type: "shockwave",
+            col: targetPos.col,
+            row: targetPos.row,
+            radius: spell.radius,
+            duration: 0.5,
+            time: 0.5
+        });
     }
+}
+
+// (OPSIONAL) Fungsi Update untuk Spell yang memiliki durasi di tanah (Blizzard, Poison Cloud)
+// Nanti dipanggil di gameLoop
+export function updateSpells(gameState, dt) {
+    // Jika nanti kamu punya spell yang "nempel" di tanah (Zone),
+    // Kamu simpan di gameState.activeSpells dan loop disini.
 }

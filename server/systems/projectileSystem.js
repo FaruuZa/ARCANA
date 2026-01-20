@@ -1,82 +1,95 @@
 import { distance } from "../utils/math.js";
-import { dealAreaDamage } from "../utils/combat.js";
+import { dealAreaDamage, applyBuff } from "../utils/combat.js"; // Import helper combat
 
 export function updateProjectiles(gameState, dt) {
-    const projectiles = gameState.projectiles;
-    const allEntities = [...gameState.units, ...gameState.buildings];
+  // Filter peluru mati
+  gameState.projectiles = gameState.projectiles.filter((p) => !p.isDead);
 
-    for (let i = projectiles.length - 1; i >= 0; i--) {
-        const proj = projectiles[i];
-        
-        // 1. Cari Target (Homing Missile Logic)
-        const target = allEntities.find(e => e.id === proj.targetId);
+  const units = gameState.units;
+  const buildings = gameState.buildings;
+  const allEntities = [...units, ...buildings];
 
-        let destCol, destRow;
+  for (const proj of gameState.projectiles) {
+    if (proj.isDead) continue;
 
-        if (target && target.hp > 0) {
-            // Update tujuan ke posisi target terbaru (Homing)
-            destCol = target.col;
-            destRow = target.row;
-        } else {
-            // Target mati saat peluru terbang?
-            // Opsi A: Peluru hilang (Simple) -> projectiles.splice(i, 1); continue;
-            // Opsi B: Peluru lanjut ke posisi TERAKHIR target (Realistic)
-            // Kita pakai Opsi B (Lanjut ke koordinat terakhir target)
-            destCol = proj.targetCol || proj.col; 
-            destRow = proj.targetRow || proj.row;
-        }
+    // 1. CARI TARGET
+    // (Asumsi saat ini peluru selalu homing/mengejar targetId)
+    const target = allEntities.find((e) => e.id === proj.targetId);
 
-        // Simpan Last Known Position (untuk Opsi B)
-        proj.targetCol = destCol;
-        proj.targetRow = destRow;
-
-        // 2. Gerakan
-        const dx = destCol - proj.col;
-        const dy = destRow - proj.row;
-        const distToTarget = Math.sqrt(dx*dx + dy*dy);
-        
-        const moveStep = proj.speed * dt;
-
-        if (distToTarget <= moveStep) {
-            // === HIT! ===
-            
-            if (proj.aoeRadius > 0) {
-                // [PROJECTILE AOE EXPLOSION]
-                // Meledak di lokasi saat ini (destCol, destRow)
-                dealAreaDamage(
-                    gameState, 
-                    { col: destCol, row: destRow }, // Origin ledakan
-                    proj.aoeRadius, 
-                    proj.damage, 
-                    proj.team, 
-                    proj.targetHeight || 'both'
-                );
-                
-                // (TODO: Emit Visual Explosion Effect ke Client)
-                gameState.effects.push({
-                    id: gameState.nextEntityId++,
-                    type: 'explosion',
-                    col: destCol, 
-                    row: destRow,
-                    radius: proj.aoeRadius,
-                    duration: 0.3,
-                    time: 0.3
-                });
-
-            } else {
-                // [SINGLE TARGET HIT]
-                if (target && target.hp > 0) {
-                    target.hp -= proj.damage;
-                }
-            }
-
-            // Hapus Projectile
-            projectiles.splice(i, 1);
-
-        } else {
-            // Move Forward
-            proj.col += (dx / distToTarget) * moveStep;
-            proj.row += (dy / distToTarget) * moveStep;
-        }
+    // Jika target hilang/mati di tengah jalan
+    if (!target || target.hp <= 0) {
+      proj.isDead = true;
+      continue;
     }
+
+    // 2. GERAKAN PELURU
+    const dx = target.col - proj.col;
+    const dy = target.row - proj.row;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Hitung langkah frame ini
+    const moveStep = proj.speed * dt;
+
+    if (dist <= moveStep || dist < 0.5) {
+      // === HIT TARGET ===
+      proj.isDead = true; // Hapus peluru
+
+      // A. LOGIKA AREA OF EFFECT (AOE)
+      // Contoh: Fireball, Ice Bomb
+      if (proj.aoeRadius > 0) {
+        
+        dealAreaDamage(
+            gameState, 
+            proj,            // Origin ledakan (posisi peluru terakhir)
+            proj.aoeRadius, 
+            proj.damage, 
+            proj.team, 
+            proj.targetHeight, 
+            'enemy',         // Default rule peluru biasanya serang musuh
+            proj.onHitEffects // <--- [PENTING] Kirim Buff ke sini!
+        );
+
+        // Visual Ledakan Area
+        gameState.effects.push({
+            id: gameState.nextEntityId++,
+            type: "shockwave", // Atau sesuaikan visual berdasarkan tipe proj
+            col: proj.col,
+            row: proj.row,
+            radius: proj.aoeRadius,
+            duration: 0.3,
+            time: 0.3
+        });
+
+      } else {
+        // B. LOGIKA SINGLE TARGET
+        // Contoh: Panah biasa, Tembakan Ranger
+        
+        // 1. Deal Damage
+        target.hp -= proj.damage;
+
+        // 2. Apply Buffs (Slow, Poison, dll)
+        if (proj.onHitEffects && proj.onHitEffects.length > 0) {
+            proj.onHitEffects.forEach(buff => {
+                applyBuff(target, buff);
+            });
+        }
+
+        // Visual Hit Biasa
+        gameState.effects.push({
+            id: gameState.nextEntityId++,
+            type: "impact", // Kecil
+            col: target.col,
+            row: target.row,
+            radius: 0.5,
+            duration: 0.1,
+            time: 0.1
+        });
+      }
+
+    } else {
+      // Belum sampai -> Gerakkan peluru
+      proj.col += (dx / dist) * moveStep;
+      proj.row += (dy / dist) * moveStep;
+    }
+  }
 }

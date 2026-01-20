@@ -1,0 +1,48 @@
+ARCANA – CORE GAME RULES
+
+I. PRA-MATCH RULES
+
+1. Random Faction Assignment
+- Setiap match, faction player ditentukan secara acak.
+- Faction yang tersedia:
+  - Solaris
+  - Noctis
+- Faction berikut belum aktif dan tidak dapat dimainkan:
+  - Mortis
+  - Chronis
+
+2. Deck Composition
+- Setelah faction ditentukan, player menyusun deck berisi 10–12 kartu.
+- Deck dapat berisi kombinasi dari 3 jenis kartu:
+  a. Faction-Based Cards
+  b. Neutral Cards
+  c. Taboo Cards
+
+3. Card Accessibility
+- Faction-Based Cards hanya dapat digunakan oleh faction terkait.
+- Neutral Cards dapat digunakan oleh semua faction.
+- Taboo Cards dapat digunakan oleh semua faction.
+
+4. Taboo Card Rules
+- Taboo Cards memiliki kekuatan lebih tinggi dibanding Neutral Cards.
+- Setiap Taboo Card wajib memiliki demerit atau konsekuensi.
+- Efek Taboo Card dapat berdampak pada:
+  - Kedua player
+  - Unit sendiri
+  - Unit lawan
+  - Board secara global
+
+II. IN-GAME RULES
+
+5. Card Deployment
+- Kartu dimainkan dengan cara di-deploy ke board.
+- Setiap kartu membutuhkan Arcana untuk dimainkan.
+- Jika Arcana tidak mencukupi, kartu tidak dapat dimainkan.
+
+6. Hand Rules
+- Player memiliki maksimal 5 kartu di hand.
+- Kartu awal dan kartu selanjutnya diambil secara acak dari deck.
+- Sistem draw tidak menggunakan fixed cycle.
+
+7. Victory Condition
+- Player yang pertama kali menghancurkan Tower Utama milik lawan dinyatakan menang.

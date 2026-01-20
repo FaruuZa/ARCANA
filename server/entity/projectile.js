@@ -1,28 +1,31 @@
-// server/entity/projectile.js
-
 export function createProjectile(data) {
   return {
     id: data.id,
-    team: data.team,
-    ownerId: data.ownerId, // Unit yang menembak
-    targetId: data.targetId, // Unit yang ditarget
+    ownerId: data.ownerId,
+    targetId: data.targetId, // Target spesifik (untuk homing missile)
     
-    // Posisi Awal
-    row: data.row,
+    // Posisi & Gerakan
     col: data.col,
+    row: data.row,
+    speed: data.speed,
     
-    // Properti
-    speed: data.speed ?? 10.0,
-    damage: data.damage ?? 10,
-    type: data.type ?? 'arrow', // visual type
+    // Stats Combat
+    damage: data.damage,
+    team: data.team,
     
-    // === [FIX WAJIB] ===
-    // Tambahkan properti ini agar ProjectileSystem bisa membacanya!
+    // Tipe & Visual
+    type: data.type || "arrow", // 'arrow', 'fireball', 'cannonball'
+    
+    // Area of Effect
     aoeRadius: data.aoeRadius || 0,
-    targetHeight: data.targetHeight || 'both', // Penting untuk AOE filter (misal: Bomb tanah gak kena udara)
-    // ===================
     
-    // State
-    hasHit: false
+    // Targeting Rules (diwariskan dari Unit penembak)
+    targetHeight: data.targetHeight || 'both',
+    
+    // [NEW] DAFTAR BUFF YANG DIBAWA PELURU
+    // Array of objects: [{ type: 'slow', val: 0.5, dur: 2.0, ... }]
+    onHitEffects: data.onHitEffects || [],
+
+    isDead: false
   };
 }

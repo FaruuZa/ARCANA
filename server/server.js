@@ -58,7 +58,7 @@ function processCardUsage(playerState, cardInfo, cardId) {
   if (playerState.deck.length === 0) {
     // Refill deck (Logic sederhana)
     playerState.deck = [
-      "vessel_cavalry", 'vessel_assassin', 'vessel_swarm', 'vessel_valkyrie', 'vessel_bomber', 'vessel_healer', 'vessel_healer_2', 'ritual_01', 'ritual_01'
+      "vessel_cavalry", 'vessel_assassin', 'vessel_silencer', 'ritual_root', 'ritual_warcry', 'vessel_frost_archer', 'vessel_hammer'
     ];
     playerState.deck.sort(() => Math.random() - 0.5);
   }
@@ -92,6 +92,16 @@ io.on("connection", (socket) => {
     assignedTeam = 1;
   }
 
+  // Set status Connected di State
+  if (assignedTeam !== -1) {
+      gameState.players[assignedTeam].connected = true;
+      // [TOAST] Beritahu semua orang ada player masuk
+      io.emit("toast", { msg: `Player joined Team ${assignedTeam == 0 ? "Solaris" : "Noctis"}`, type: "success" });
+  } else {
+      // Spectator
+      socket.emit("toast", { msg: "Room full. Spectating mode.", type: "info" });
+  }
+
   // 2. BERITAHU CLIENT DIA SIAPA
   // Kirim event khusus 'welcome'
   socket.emit("welcome", {
@@ -100,6 +110,30 @@ io.on("connection", (socket) => {
   });
 
   console.log(`Socket ${socket.id} assigned to Team ${assignedTeam}`);
+
+  // [NEW] Handler Spectator ingin Join (Menggantikan yg DC)
+  socket.on("request_join_game", (teamId) => {
+      // Cek apakah kursi benar-benar kosong
+      if (sessions[teamId] === null) {
+          // Ambil alih kursi
+          sessions[teamId] = socket.id;
+          assignedTeam = teamId; // Update local scope variable
+          gameState.players[teamId].connected = true;
+
+          // Update Client ini: "Kamu sekarang main!"
+          socket.emit("welcome", {
+              myTeam: assignedTeam,
+              initialState: gameState
+          });
+
+          // Beritahu semua orang
+          io.emit("toast", { msg: `A Spectator took over Team ${teamId == 0 ? "Solaris" : "Noctis"}!`, type: "success" });
+          
+          console.log(`Socket ${socket.id} took over Team ${teamId}`);
+      } else {
+          socket.emit("toast", { msg: "Slot already taken!", type: "error" });
+      }
+  });
 
   socket.emit("state:update", gameState); // Kirim state awal penuh
 
@@ -168,26 +202,39 @@ io.on("connection", (socket) => {
 
   // === HANDLER 2: CAST RITUAL (Spell) ===
   socket.on("cast_ritual", (data) => {
+    // 1. Validasi State
+    if (gameState.phase !== "battle") return;
     if (assignedTeam === -1) return;
-    const playerState = gameState.players[assignedTeam];
-    const cardInfo = CARDS[data.cardId];
-    if (!cardInfo || cardInfo.type !== "RITUAL") return;
 
-    // Validasi Placement Ritual?
-    // Ritual biasanya BEBAS (bisa di mana saja), jadi kita SKIP isValidPlacement.
-    // Atau buat validasi khusus (misal: hanya radius 5 dari unit teman).
-    // Untuk "Solar Flare", kita biarkan bebas (Global Range).
+    // 2. Validasi Data Kartu
+    const player = gameState.players[assignedTeam];
+    const cardId = data.cardId;
+    const cardData = CARDS[cardId];
 
-    // Proses Pembayaran & Kartu
-    if (processCardUsage(playerState, cardInfo, data.cardId)) {
-      // Jika sukses bayar -> Cast Effect
-      castRitual(gameState, {
-        team: assignedTeam,
-        col: data.col,
-        row: data.row,
-        spellData: cardInfo.spellData,
-      });
+    if (!cardData || cardData.type !== "RITUAL") return;
+
+    // 3. Validasi Cost & Cooldown (Basic)
+    if (player.arcana < cardData.cost) return;
+
+    // 4. Potong Mana & Putar Deck
+    player.arcana -= cardData.cost;
+    
+    // Logic putar kartu (Next -> Hand -> Deck)
+    const handIndex = player.hand.indexOf(cardId);
+    if (handIndex !== -1) {
+        player.hand[handIndex] = player.next;
+        player.next = player.deck.shift();
+        player.deck.push(cardId); 
     }
+
+    // 5. [FIX] DELEGASIKAN LOGIKA GAME KE SYSTEM
+    castRitual(
+        gameState, 
+        socket.id, 
+        assignedTeam, 
+        cardId, 
+        { col: data.col, row: data.row } // Target Pos
+    );
   });
 
   socket.on("rematch_request", () => {
@@ -226,15 +273,27 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log(`Client disconnected: ${socket.id}`);
+    
+    if (sessions[0] === socket.id) {
+        sessions[0] = null;
+        gameState.players[0].connected = false; // Tandai disconnected
+        
+        // [TOAST] Player Solaris keluar
+        io.emit("toast", { msg: "Player Solaris (Blue) Disconnected!", type: "error" });
+        
+        // Reset rematch vote jika dia keluar
+        if (rematchVotes.has(0)) { rematchVotes.delete(0); gameState.rematchCount = rematchVotes.size; }
+    }
 
-    // HAPUS DARI KURSI
-    if (sessions[0] === socket.id) sessions[0] = null;
-    if (sessions[1] === socket.id) sessions[1] = null;
+    if (sessions[1] === socket.id) {
+        sessions[1] = null;
+        gameState.players[1].connected = false; // Tandai disconnected
 
-    if (rematchVotes.has(assignedTeam)) {
-         rematchVotes.delete(assignedTeam);
-         gameState.rematchCount = rematchVotes.size;
-     }
+        // [TOAST] Player Noctis keluar
+        io.emit("toast", { msg: "Player Noctis (Red) Disconnected!", type: "error" });
+
+        if (rematchVotes.has(1)) { rematchVotes.delete(1); gameState.rematchCount = rematchVotes.size; }
+    }
   });
 });
 

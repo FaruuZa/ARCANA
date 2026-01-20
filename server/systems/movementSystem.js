@@ -8,7 +8,6 @@ import {
 import { distance } from "../utils/math.js";
 import { dealAreaDamage } from "../utils/combat.js";
 
-const UNIT_RADIUS = 0.4;
 const BUILDING_RADIUS = 1.0;
 const SEPARATION_FORCE = 2.0;
 const RIVER_TOP_BANK = RIVER_ROW_START - 0.5;
@@ -105,7 +104,7 @@ export function updateMovement(gameState, dt) {
     for (const other of units) {
       if (unit === other) continue;
       const dist = distance(unit, other);
-      if (dist < UNIT_RADIUS * 2) {
+      if (dist < unit.radius + other.radius) {
         let pushX = unit.col - other.col;
         let pushY = unit.row - other.row;
         const len = Math.sqrt(pushX * pushX + pushY * pushY);
@@ -128,7 +127,7 @@ export function updateMovement(gameState, dt) {
         const dx = unit.col - b.col;
         const dy = unit.row - b.row;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const minDist = UNIT_RADIUS + BUILDING_RADIUS;
+        const minDist = unit.radius + BUILDING_RADIUS;
         if (dist < minDist) {
           const pushFactor = (minDist - dist) / dist;
           moveX += dx * pushFactor * 5.0;
@@ -195,7 +194,7 @@ export function updateMovement(gameState, dt) {
       
                   // Kita ingin mendarat di jarak aman (Radius Tower + Radius Unit + Sedikit Buffer)
                   // Radius Tower = 1.0 (BUILDING_RADIUS)
-                  const safeDistance = BUILDING_RADIUS + UNIT_RADIUS + 0.2;
+                  const safeDistance = BUILDING_RADIUS + unit.radius + 0.2;
       
                   // Kita geser titik pendaratan mundur dari pusat tower ke arah unit
                   const landDistance = Math.max(0, d - safeDistance);

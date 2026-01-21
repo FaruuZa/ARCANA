@@ -113,8 +113,12 @@ export function updateHand(state) {
 function setupCardInteractions(cardEl, cardId, index, cardData) {
   cardEl.onpointerdown = (e) => {
     e.stopPropagation(); 
-    
-    // Logic Select
+
+    // [PENTING] Set pointer capture agar tidak kehilangan fokus saat gerak cepat
+    try {
+        cardEl.setPointerCapture(e.pointerId);
+    } catch (err) {}
+
     const isAlreadySelected = (selection.index == index);
     let justSelected = false;
 
@@ -126,19 +130,22 @@ function setupCardInteractions(cardEl, cardId, index, cardData) {
     const currentPlayer = gameState.players[myTeamId];
     refreshCardClasses(currentPlayer ? currentPlayer.hand : [], currentPlayer ? currentPlayer.arcana : 0);
 
-    // Setup Drag Variables
     const startX = e.clientX;
     const startY = e.clientY;
+    
+    // Hitung offset agar kartu tidak 'teleport' ke tengah mouse saat mulai drag
+    // Kita ingin memegang kartu tepat di bagian yang kita klik
     const rect = cardEl.getBoundingClientRect();
     const offsetX = startX - (rect.left + rect.width / 2);
     const offsetY = startY - (rect.top + rect.height / 2);
 
     let isDragging = false;
-    const elBottomPanel = document.getElementById("bottom-panel");
-    const panelHeight = elBottomPanel.clientHeight;
-    const panelTopY = window.innerHeight - panelHeight;
+    let rAF = null; // Variable untuk menyimpan ID animation frame
 
-    // Info Popup Timer
+    const elBottomPanel = document.getElementById("bottom-panel");
+    const panelRect = elBottomPanel.getBoundingClientRect(); 
+    const panelTopY = panelRect.top; 
+
     holdTimer = setTimeout(() => {
       if (!isDragging) {
           showCardInfo(cardData);
@@ -146,71 +153,99 @@ function setupCardInteractions(cardEl, cardId, index, cardData) {
       }
     }, 500);
 
-    // 1. HANDLER GERAK (DRAG)
+    // CLEANUP FUNCTION
+    const stopInteractions = () => {
+        if (rAF) cancelAnimationFrame(rAF); // Stop loop visual
+        
+        elBottomPanel.removeEventListener("pointermove", onMove);
+        elBottomPanel.removeEventListener("pointerleave", onLeave);
+        window.removeEventListener("pointerup", onUp);
+        
+        try {
+            if (cardEl.hasPointerCapture(e.pointerId)) {
+                cardEl.releasePointerCapture(e.pointerId);
+            }
+        } catch (err) {}
+    };
+
+    // 1. HANDLER KELUAR (RESET)
+    const onLeave = () => {
+        if (isDragging) {
+            cardEl.classList.remove("dragging");
+            // [FIX] Kembalikan transition agar saat balik ke tangan terlihat mulus
+            cardEl.style.transition = ""; 
+            cardEl.style.transform = ""; 
+            cardEl.style.opacity = "1";
+        }
+        stopInteractions();
+    };
+
+    // 2. HANDLER GERAK (DRAG)
     const onMove = (moveEvent) => {
+        // [Safety Mobile] Cek keluar panel atas
+        if (moveEvent.clientY < panelTopY) {
+            onLeave();
+            return;
+        }
+
         const dx = moveEvent.clientX - startX;
         const dy = moveEvent.clientY - startY;
         const dist = Math.hypot(dx, dy);
 
-        if (dist > 5) {
+        // Ambang batas drag (5px)
+        if (!isDragging && dist > 5) {
             isDragging = true;
             clearTimeout(holdTimer);
             if (isInfoVisible) hideCardInfo();
             
             cardEl.classList.add("dragging");
             
-            const xPos = moveEvent.clientX - (window.innerWidth / 2) - offsetX;
-            const yPos = moveEvent.clientY - (window.innerHeight - 100) - offsetY;
-            
-            cardEl.style.transform = `translate(${xPos}px, ${yPos}px) translateX(-50%) scale(1)`;
-            cardEl.style.opacity = "1";
+            // [FIX UTAMA 1] Matikan CSS Transition agar ngikutin mouse 100% realtime
+            cardEl.style.transition = "none"; 
         }
-    };
 
-    // 2. HANDLER KELUAR PANEL (STOP LISTENING)
-    const onLeave = () => {
         if (isDragging) {
-            // Reset Visual Kartu (Balik ke slot)
-            // Ini penting agar kartu tidak 'nyangkut' visualnya di pinggir panel
-            cardEl.classList.remove("dragging");
-            cardEl.style.transform = ""; 
-            cardEl.style.opacity = "1";
-        }
+            // [FIX UTAMA 2] Gunakan requestAnimationFrame untuk performa visual
+            // Mencegah update DOM berlebihan yang bikin stutter
+            if (rAF) return; // Jika frame sebelumnya belum kelar render, skip logic visual ini
 
-        // [FIX UTAMA] Hentikan pendengaran event move DI SINI
-        // Begitu mouse keluar panel, hand.js lepas tangan.
-        // Biarkan pointer.js (yang handle canvas) mengurus logic 'Ghost' di map.
-        elBottomPanel.removeEventListener("pointermove", onMove);
-        elBottomPanel.removeEventListener("pointerleave", onLeave);
+            rAF = requestAnimationFrame(() => {
+                // Hitung posisi relatif terhadap tengah layar (karena transform CSS mainnya disitu)
+                // Sesuaikan logika ini dengan CSS container Anda jika perlu
+                const xPos = moveEvent.clientX - (window.innerWidth / 2) - offsetX;
+                const yPos = moveEvent.clientY - (window.innerHeight - 100) - offsetY;
+
+                // [FIX VISUAL] Tambahkan scale sedikit biar kelihatan sedang diangkat
+                cardEl.style.transform = `translate(${xPos}px, ${yPos}px) translateX(-50%) scale(1.1)`;
+                cardEl.style.opacity = "0.9"; // Sedikit transparan biar kelihatan map di belakangnya
+                
+                rAF = null; // Reset flag agar frame berikutnya bisa jalan
+            });
+        }
     };
 
     // 3. HANDLER LEPAS (DROP)
     const onUp = (upEvent) => {
         clearTimeout(holdTimer);
         if (isInfoVisible) hideCardInfo();
+        stopInteractions();
 
-        // Bersihkan Listener
-        elBottomPanel.removeEventListener("pointermove", onMove);
-        elBottomPanel.removeEventListener("pointerleave", onLeave);
-        window.removeEventListener("pointerup", onUp);
-
-        // Reset Visual Akhir
+        // Reset Visual
         cardEl.classList.remove("dragging");
+        // [FIX] Hapus override style transition & transform agar kembali diatur oleh CSS Class
+        cardEl.style.transition = ""; 
         cardEl.style.transform = ""; 
         cardEl.style.opacity = "1";
 
         if (isDragging) {
-            // Jika dilepas di luar panel (Game Area / Canvas)
-            // Pointer.js yang akan handle spawn unit via 'window.pointerup'
-            // Hand.js hanya perlu memastikan seleksi dibersihkan jika dilepas di dalam panel
-            
+            // Cek Drop Zone
             if (upEvent.clientY >= panelTopY) {
-                // Dilepas DI DALAM PANEL -> Cancel Deploy
+                // Drop di dalam panel -> Cancel
                 clearSelection();
                 updateGhostPosition(-1, -1);
             }
         } else {
-            // Klik Tanpa Drag (Toggle Select)
+            // Klik (Tap)
             if (!justSelected) {
                 selectCard(cardId, index);
             }
@@ -218,7 +253,7 @@ function setupCardInteractions(cardEl, cardId, index, cardData) {
     };
 
     elBottomPanel.addEventListener("pointermove", onMove);
-    elBottomPanel.addEventListener("pointerleave", onLeave);
+    elBottomPanel.addEventListener("pointerleave", onLeave); 
     window.addEventListener("pointerup", onUp);
   }
 }

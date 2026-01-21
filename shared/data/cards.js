@@ -339,7 +339,102 @@ export const CARDS = {
       ]
     },
     description: "Make allies GIANT! Increases size and damage by 50%."
-}
+},
+
+  // 1. CONTOH AURA: "Paladin"
+  // Memberi armor/heal ke teman di sekitar
+  "vessel_paladin": {
+    id: "vessel_paladin",
+    name: "Paladin",
+    type: "VESSEL",
+    cost: 5,
+    stats: {
+      hp: 1000, damage: 80, range: 1.0, speed: 2.5,
+      traits: {
+        aura: {
+          radius: 3.5,
+          targetTeam: 'ally',
+          buffs: [
+            { type: 'regen', value: 5 } // Heal 5 HP per tick (kuat!)
+          ]
+        }
+      }
+    }
+  },
+
+  // 2. CONTOH ON-DEATH: "Giant Skeleton"
+  // Mati meninggalkan bom besar
+  "vessel_giant_skeleton": {
+    id: "vessel_giant_skeleton",
+    name: "Giant Skeleton",
+    type: "VESSEL",
+    cost: 6,
+    stats: {
+      hp: 2000, damage: 100, range: 1.0, speed: 2.0, radius: 0.6,
+      traits: {
+        onDeath: {
+          type: 'damage_aoe',
+          radius: 2.5,
+          damage: 1000 // Massive Damage!
+        }
+      }
+    }
+  },
+
+  // 3. CONTOH ON-SPAWN: "Electro Wizard" (Masuk langsung Zap)
+  "vessel_electro": {
+    id: "vessel_electro",
+    name: "Electro Mage",
+    type: "VESSEL",
+    cost: 4,
+    stats: {
+      hp: 600, damage: 90, range: 4.0, speed: 3.0,
+      traits: {
+        onSpawn: {
+          type: 'damage_aoe',
+          radius: 2.0,
+          damage: 150,
+          buffs: [{ type: 'stun', duration: 0.5 }] // Stun saat mendarat
+        }
+      }
+    }
+  },
+
+  // 4. CONTOH SPAWN ON DEATH: "Golem"
+  "vessel_golem": {
+    id: "vessel_golem",
+    name: "Golem",
+    type: "VESSEL",
+    cost: 8,
+    stats: {
+      hp: 3000, damage: 100, speed: 1, radius: 1, range:2, targetRule:'building_only',
+      traits: {
+        onDeath: {
+          type: 'spawn',
+          unitId: 'vessel_golemite', // Pastikan kartu ini ada (walau hidden)
+          count: 2
+        }
+      }
+    }
+  },
+
+  "vessel_golemite":{
+    id: "vessel_golemite",
+    name: "Golemite",
+    type: "VESSEL",
+    cost: 0,
+    stats:{
+      hp: 150, damage: 50, range:1.5, radius: 0.5, speed:2.0, targetRule:'building_only',
+      traits:{
+        onDeath:{
+          type: 'damage_aoe',
+          radius: 1.5,
+          damage: 200 
+        }
+      }
+    }
+  }
+
   
 
   

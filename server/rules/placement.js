@@ -1,11 +1,17 @@
 import { GRID, RIVER_ROW_START, RIVER_ROW_END } from "../../shared/constants.js";
 
+// [NEW] Hardcode posisi Tower statis (sesuai gameState.js)
+// Format: {col, row_offset_from_base}
+const TOWER_LOCATIONS = [
+    { col: 3, rowOffset: 6 },   // Left Side
+    { col: 9, rowOffset: 3 },   // King
+    { col: 15, rowOffset: 6 }   // Right Side
+];
+
+const TOWER_BLOCK_RADIUS = 1.5; // Radius area terlarang di sekitar tower
+
 /**
  * Memvalidasi apakah posisi spawn valid untuk tim tertentu.
- * @param {number} team - 0 (Bawah) atau 1 (Atas)
- * @param {number} col - Koordinat Grid X
- * @param {number} row - Koordinat Grid Y
- * @returns {boolean} True jika valid
  */
 export function isValidPlacement(team, col, row) {
   // 1. Cek Batas Board (Out of Bounds)
@@ -13,30 +19,39 @@ export function isValidPlacement(team, col, row) {
   if (row < 0 || row >= GRID.rows) return false;
 
   // 2. Cek Zona Wilayah (Territory Check)
-  // Area Spawn tidak boleh di Sungai atau di Wilayah Musuh.
-  
   if (team === 0) {
-    // === TEAM 0 (BAWAH) ===
-    // Hanya boleh spawn dari Row 0 sampai sebelum Sungai
-    // RIVER_ROW_START = 16. Jadi max row = 15.
-    return row < RIVER_ROW_START;
-  
+    if (row >= RIVER_ROW_START) return false;
   } else if (team === 1) {
-    // === TEAM 1 (ATAS) ===
-    // Hanya boleh spawn dari Row setelah Sungai sampai Row 33
-    // RIVER_ROW_END = 18. Jadi min row = 18.
-    return row >= RIVER_ROW_END;
+    if (row < RIVER_ROW_END) return false;
   }
 
-  return false;
+  // 3. [NEW] Cek Tabrakan dengan Tower Statis
+  // Kita cek apakah posisi spawn terlalu dekat dengan tower milik tim sendiri
+  // (Tower musuh sudah tercover oleh territory check di atas)
+  
+  // Hitung posisi Y tower berdasarkan team
+  // Team 0: y = offset. Team 1: y = (Rows-1) - offset.
+  for (const tower of TOWER_LOCATIONS) {
+      const towerRow = (team === 0) ? tower.rowOffset : (GRID.rows - 1) - tower.rowOffset;
+      const towerCol = tower.col;
+
+      // Hitung jarak Euclidean sederhana
+      const dx = col - towerCol;
+      const dy = row - towerRow;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      // Jika terlalu dekat, invalid
+      if (dist < TOWER_BLOCK_RADIUS) {
+          return false;
+      }
+  }
+
+  return true;
 }
 
-/**
- * (Opsional) Fungsi helper untuk mendapatkan pesan error
- */
 export function getPlacementError(team, col, row) {
     if (!isValidPlacement(team, col, row)) {
-        return "Invalid Placement: Cannot spawn in river or enemy territory.";
+        return "Invalid Placement: Restricted area.";
     }
     return null;
 }

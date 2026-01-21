@@ -55,7 +55,7 @@ export function updateMovement(gameState, dt) {
             unit.traits.jump.damage,
             unit.team,
             "both",
-            jumpTargetRule
+            jumpTargetRule,
           );
 
           gameState.effects.push({
@@ -94,7 +94,7 @@ export function updateMovement(gameState, dt) {
     let moveX = 0;
     let moveY = 0;
 
-    // SEPARATION
+    // SEPARATION (Unit vs Unit) - [UPDATED SAFETY]
     const currentSeparation = unit.isCrossing
       ? SEPARATION_FORCE * 0.2
       : SEPARATION_FORCE;
@@ -103,14 +103,20 @@ export function updateMovement(gameState, dt) {
       neighbors = 0;
     for (const other of units) {
       if (unit === other) continue;
-      const dist = distance(unit, other);
-      if (dist < unit.radius + other.radius) {
-        let pushX = unit.col - other.col;
-        let pushY = unit.row - other.row;
-        const len = Math.sqrt(pushX * pushX + pushY * pushY);
-        if (len > 0) {
-          separationX += pushX / len;
-          separationY += pushY / len;
+
+      let px = unit.col - other.col;
+      let py = unit.row - other.row;
+      let dist = Math.sqrt(px * px + py * py);
+
+      if (dist < 0.0001) {
+        px = 0.1; // Dorong sedikit ke kanan
+        dist = 0.1;
+      }
+
+      if (dist < unit.radius - 0.3 + other.radius) {
+        if (dist > 0) {
+          separationX += px / dist;
+          separationY += py / dist;
           neighbors++;
         }
       }
@@ -127,7 +133,13 @@ export function updateMovement(gameState, dt) {
         const dx = unit.col - b.col;
         const dy = unit.row - b.row;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const minDist = unit.radius + BUILDING_RADIUS;
+        if (dist < 0.0001) {
+          moveY += 5.0; // Dorong ke bawah
+          moveX += 1.0; // Dorong sedikit ke kanan biar gak lurus kaku
+          continue; // Skip kalkulasi fisika normal frame ini
+        }
+
+        const minDist = unit.radius - 0.3 + BUILDING_RADIUS;
         if (dist < minDist) {
           const pushFactor = (minDist - dist) / dist;
           moveX += dx * pushFactor * 5.0;
@@ -142,83 +154,82 @@ export function updateMovement(gameState, dt) {
 
     // --- 4. NAVIGATION LOGIC ---
     if (unit.state === "moving") {
-      
       // A. TRIGGER JUMP?
       if (unit.traits.jump && unit.jumpCooldown <= 0) {
-              // [NEW] PRIORITY TARGET SCANNING
-              let potentialTargets = [];
-              const jumpRange = unit.traits.jump.range;
-              const minRange = unit.traits.jump.minRange || 0;
-      
-              // Cari semua target valid dalam range lompat
-              for (const ent of allEntities) {
-                if (ent.id === unit.id) continue;
-                if (ent.hp <= 0) continue;
-                if (ent.team === unit.team) continue; // Musuh saja
-      
-                const d = distance(unit, ent);
-                if (d <= jumpRange && d >= minRange) {
-                  potentialTargets.push({ entity: ent, dist: d });
-                }
-              }
-      
-              if (potentialTargets.length > 0) {
-                // Sort berdasarkan Priority
-                const priority = unit.traits.jump.priority || "nearest";
-      
-                if (priority === "farthest") {
-                  // Terjauh dulu (Descending)
-                  potentialTargets.sort((a, b) => b.dist - a.dist);
-                } else {
-                  // Terdekat dulu (Ascending)
-                  potentialTargets.sort((a, b) => a.dist - b.dist);
-                }
-      
-                // Ambil Target Terbaik
-                const bestTarget = potentialTargets[0].entity;
-      
-                // === [FIX 1] HITUNG LANDING POSITION (TEPI TARGET) ===
-                let landCol = bestTarget.col;
-                let landRow = bestTarget.row;
-      
-                // Jika target adalah Building, jangan mendarat di tengah!
-                if (
-                  bestTarget.entityType === "building" ||
-                  bestTarget.type === "king" ||
-                  bestTarget.type === "side"
-                ) {
-                  // Hitung vektor arah dari unit ke tower
-                  const dx = bestTarget.col - unit.col;
-                  const dy = bestTarget.row - unit.row;
-                  const d = Math.sqrt(dx * dx + dy * dy);
-      
-                  // Kita ingin mendarat di jarak aman (Radius Tower + Radius Unit + Sedikit Buffer)
-                  // Radius Tower = 1.0 (BUILDING_RADIUS)
-                  const safeDistance = BUILDING_RADIUS + unit.radius + 0.2;
-      
-                  // Kita geser titik pendaratan mundur dari pusat tower ke arah unit
-                  const landDistance = Math.max(0, d - safeDistance);
-      
-                  if (d > 0) {
-                    landCol = unit.col + (dx / d) * landDistance;
-                    landRow = unit.row + (dy / d) * landDistance;
-                  }
-                }
-      
-                // === [FIX 2] START WINDUP ===
-                unit.isChannelingJump = true;
-                unit.jumpWindupTimer = unit.traits.jump.windup || 0; // Default 0 kalo gak diset
-                unit.jumpCooldown = unit.traits.jump.cooldown;
-      
-                // Simpan Tujuan (bukan referensi entity, tapi koordinat mati)
-                unit.jumpTargetPos = { col: landCol, row: landRow };
-      
-                unit.chargeTimer = 0;
-                unit.isCharging = false;
-      
-                continue; // Skip movement frame ini
-              }
+        // [NEW] PRIORITY TARGET SCANNING
+        let potentialTargets = [];
+        const jumpRange = unit.traits.jump.range;
+        const minRange = unit.traits.jump.minRange || 0;
+
+        // Cari semua target valid dalam range lompat
+        for (const ent of allEntities) {
+          if (ent.id === unit.id) continue;
+          if (ent.hp <= 0) continue;
+          if (ent.team === unit.team) continue; // Musuh saja
+
+          const d = distance(unit, ent);
+          if (d <= jumpRange && d >= minRange) {
+            potentialTargets.push({ entity: ent, dist: d });
+          }
+        }
+
+        if (potentialTargets.length > 0) {
+          // Sort berdasarkan Priority
+          const priority = unit.traits.jump.priority || "nearest";
+
+          if (priority === "farthest") {
+            // Terjauh dulu (Descending)
+            potentialTargets.sort((a, b) => b.dist - a.dist);
+          } else {
+            // Terdekat dulu (Ascending)
+            potentialTargets.sort((a, b) => a.dist - b.dist);
+          }
+
+          // Ambil Target Terbaik
+          const bestTarget = potentialTargets[0].entity;
+
+          // === [FIX 1] HITUNG LANDING POSITION (TEPI TARGET) ===
+          let landCol = bestTarget.col;
+          let landRow = bestTarget.row;
+
+          // Jika target adalah Building, jangan mendarat di tengah!
+          if (
+            bestTarget.entityType === "building" ||
+            bestTarget.type === "king" ||
+            bestTarget.type === "side"
+          ) {
+            // Hitung vektor arah dari unit ke tower
+            const dx = bestTarget.col - unit.col;
+            const dy = bestTarget.row - unit.row;
+            const d = Math.sqrt(dx * dx + dy * dy);
+
+            // Kita ingin mendarat di jarak aman (Radius Tower + Radius Unit + Sedikit Buffer)
+            // Radius Tower = 1.0 (BUILDING_RADIUS)
+            const safeDistance = BUILDING_RADIUS + (unit.radius - 0.3) + 0.2;
+
+            // Kita geser titik pendaratan mundur dari pusat tower ke arah unit
+            const landDistance = Math.max(0, d - safeDistance);
+
+            if (d > 0) {
+              landCol = unit.col + (dx / d) * landDistance;
+              landRow = unit.row + (dy / d) * landDistance;
             }
+          }
+
+          // === [FIX 2] START WINDUP ===
+          unit.isChannelingJump = true;
+          unit.jumpWindupTimer = unit.traits.jump.windup || 0; // Default 0 kalo gak diset
+          unit.jumpCooldown = unit.traits.jump.cooldown;
+
+          // Simpan Tujuan (bukan referensi entity, tapi koordinat mati)
+          unit.jumpTargetPos = { col: landCol, row: landRow };
+
+          unit.chargeTimer = 0;
+          unit.isCharging = false;
+
+          continue; // Skip movement frame ini
+        }
+      }
 
       let finalDest = null;
       let stopDistance = 0;
@@ -258,16 +269,16 @@ export function updateMovement(gameState, dt) {
 
           if (leader) {
             const isLeaderMoving = leader.state === "moving";
-            
+
             // Jarak ideal berhenti
             const idealStop = isLeaderMoving ? 2.5 : 3.5;
-            
+
             // Toleransi Gerak (Hysteresis):
             // Kalau Leader gerak: toleransi kecil (sama dengan stop distance)
             // Kalau Leader diam: toleransi besar (tambah 1.0 tile)
             // Artinya: Jika kita ada di jarak 3.9 dan idealStop 3.5, KITA DIAM SAJA.
             // Kita baru jalan kalau jarak > 4.5.
-            const movementThreshold = isLeaderMoving ? 2.5 : (idealStop + 1.0);
+            const movementThreshold = isLeaderMoving ? 2.5 : idealStop + 1.0;
 
             const distToLeader = distance(unit, leader);
 
@@ -277,9 +288,8 @@ export function updateMovement(gameState, dt) {
               stopDistance = idealStop;
             } else {
               // Sudah "cukup" dekat (dalam range toleransi) -> REM TANGAN!
-              finalDest = null; 
+              finalDest = null;
             }
-
           } else {
             // Tidak ada Leader -> Cari Tower
             let bestB = null;
@@ -323,8 +333,8 @@ export function updateMovement(gameState, dt) {
         const px = wp.col - unit.col;
         const py = wp.row - unit.row;
         const pl = Math.sqrt(px * px + py * py);
-        
-        const isFinalLeg = (wp.col === finalDest.col && wp.row === finalDest.row);
+
+        const isFinalLeg = wp.col === finalDest.col && wp.row === finalDest.row;
         const actualLimit = isFinalLeg ? stopDistance : 0.1;
 
         if (pl > actualLimit) {
@@ -353,6 +363,10 @@ export function updateMovement(gameState, dt) {
     let nextCol = unit.col + moveX * dt;
     let nextRow = unit.row + moveY * dt;
 
+    if (!isNaN(nextCol))
+      unit.col = Math.max(0.5, Math.min(GRID.cols - 0.5, nextCol));
+    if (!isNaN(nextRow)) unit.row = Math.max(0, Math.min(GRID.rows, nextRow));
+
     // RIVER WALL LOGIC
     if (unit.movementType === "ground") {
       const inRiverZone = nextRow > RIVER_TOP_BANK && nextRow < RIVER_BOT_BANK;
@@ -365,12 +379,14 @@ export function updateMovement(gameState, dt) {
           const onBridgeRight =
             Math.abs(nextCol - BRIDGE_COLUMNS[1]) < BRIDGE_WIDTH;
           if (!onBridgeLeft && !onBridgeRight && !unit.isCrossing) {
-            const distToTop = Math.abs(nextRow - RIVER_TOP_BANK);
-            const distToBot = Math.abs(nextRow - RIVER_BOT_BANK);
-            if (distToTop < distToBot) nextRow = RIVER_TOP_BANK - 0.01;
-            else nextRow = RIVER_BOT_BANK + 0.01;
-            if (Math.abs(moveX) > 0.01) moveX = Math.sign(moveX) * unit.speed;
-            moveY = 0;
+            if (
+              Math.abs(unit.row - RIVER_TOP_BANK) <
+              Math.abs(unit.row - RIVER_BOT_BANK)
+            ) {
+              unit.row = RIVER_TOP_BANK - 0.1;
+            } else {
+              unit.row = RIVER_BOT_BANK + 0.1;
+            }
           } else unit.isCrossing = true;
         } else {
           unit.isCrossing = true;
@@ -418,7 +434,7 @@ function getSmartWaypoint(unit, finalDest) {
   const distToBridgeX = Math.abs(unit.col - bridgeCol);
   const distToRiverEdge = Math.min(
     Math.abs(unit.row - RIVER_TOP_BANK),
-    Math.abs(unit.row - RIVER_BOT_BANK)
+    Math.abs(unit.row - RIVER_BOT_BANK),
   );
 
   if (distToBridgeX > 3.0 && distToRiverEdge < 1.5) {

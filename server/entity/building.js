@@ -17,6 +17,8 @@ export function createBuilding(data) {
     damage: data.damage ?? 15,
     range: data.range ?? 5.0,
     attackSpeed: data.attackSpeed ?? 1.2,
+    radius: data.radius ?? 1.0,
+
     
     entityType: 'building',
     

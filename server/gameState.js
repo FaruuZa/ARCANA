@@ -17,8 +17,8 @@ function shuffle(array) {
 // Helper: Buat Deck Starter
 function createStarterDeck() {
   const deck = [
-      "vessel_silencer", "vessel_assassin", "ritual_gigantify", "ritual_gigantify", "ritual_root", "ritual_warcry", "vessel_hammer", "vessel_frost_archer"
-  ];
+      "vessel_golem", "vessel_assassin", "vessel_electro", "vessel_giant_skeleton", "vessel_paladin"
+    ];
   return shuffle(deck);
 }
 
@@ -70,7 +70,7 @@ export function createGameState() {
 
   return {
     tick: 0,
-    phase: "battle",
+    phase: "battle", // 'battle', 'paused', 'ended'
     players: players,
     winner: null,
     units: [],
@@ -78,8 +78,13 @@ export function createGameState() {
     projectiles: [],
     effects: [], // Menyimpan data visual sementara (ledakan, spawn, dll)
     nextEntityId: nextId,
+    rematchCount: 0,
 
-    rematchCount: 0
+    paused: false,
+    pauseReason: null,     // "Waiting for Solaris..."
+    pauseEndTime: null,    // Timestamp kapan auto-win terjadi (Date.now() + 60000)
+    disconnectedTeam: -1   // ID Tim yang sedang DC
+
   };
 }
 
@@ -123,6 +128,8 @@ export function spawnUnit(state, data) {
         aoeType: data.aoeType || 'target', // 'target' | 'self'
         projectileType: data.projectileType || null,
         traits: data.traits || {},
+
+        
         
 
     });

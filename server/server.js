@@ -8,6 +8,7 @@ import { gameLoop } from "./gameLoop.js";
 import { CARDS } from "../shared/data/cards.js";
 import { isValidPlacement } from "./rules/placement.js";
 import { castRitual } from "./systems/spellSystem.js";
+import { processDeaths } from "./systems/deathSystem.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,11 +26,21 @@ const sessions = {
   1: null, // Socket ID untuk Team 1
 };
 
+const disconnectTimers = {
+  0: null,
+  1: null
+};
+
+const PAUSE_DURATION_MS = 60000; // 1 Menit
+
 let rematchVotes = new Set();
 
 setInterval(() => {
 
-  gameLoop(gameState, DT);
+  if (!gameState.paused && gameState.phase === "battle") {
+    gameLoop(gameState, DT);
+    processDeaths(gameState);
+  }
 
   const packet = {
     ...gameState, // Copy data game
@@ -95,7 +106,8 @@ io.on("connection", (socket) => {
   // Set status Connected di State
   if (assignedTeam !== -1) {
       gameState.players[assignedTeam].connected = true;
-      // [TOAST] Beritahu semua orang ada player masuk
+
+      handlePlayerConnect(assignedTeam);
       io.emit("toast", { msg: `Player joined Team ${assignedTeam == 0 ? "Solaris" : "Noctis"}`, type: "success" });
   } else {
       // Spectator
@@ -103,7 +115,6 @@ io.on("connection", (socket) => {
   }
 
   // 2. BERITAHU CLIENT DIA SIAPA
-  // Kirim event khusus 'welcome'
   socket.emit("welcome", {
     myTeam: assignedTeam,
     initialState: gameState,
@@ -111,25 +122,21 @@ io.on("connection", (socket) => {
 
   console.log(`Socket ${socket.id} assigned to Team ${assignedTeam}`);
 
-  // [NEW] Handler Spectator ingin Join (Menggantikan yg DC)
   socket.on("request_join_game", (teamId) => {
-      // Cek apakah kursi benar-benar kosong
       if (sessions[teamId] === null) {
-          // Ambil alih kursi
           sessions[teamId] = socket.id;
-          assignedTeam = teamId; // Update local scope variable
+          assignedTeam = teamId;
           gameState.players[teamId].connected = true;
 
-          // Update Client ini: "Kamu sekarang main!"
+          // [NEW] Handle Reconnect (Cancel Timer)
+          handlePlayerConnect(teamId);
+
           socket.emit("welcome", {
               myTeam: assignedTeam,
               initialState: gameState
           });
 
-          // Beritahu semua orang
           io.emit("toast", { msg: `A Spectator took over Team ${teamId == 0 ? "Solaris" : "Noctis"}!`, type: "success" });
-          
-          console.log(`Socket ${socket.id} took over Team ${teamId}`);
       } else {
           socket.emit("toast", { msg: "Slot already taken!", type: "error" });
       }
@@ -238,64 +245,116 @@ io.on("connection", (socket) => {
   });
 
   socket.on("rematch_request", () => {
-    // 1. Validasi: Hanya boleh saat game selesai
+    // ... (Logic Rematch SAMA, tapi tambahkan reset Paused) ...
     if (gameState.phase !== "ended") return;
     if (assignedTeam === -1) return;
 
-    // 2. Catat Vote
     rematchVotes.add(assignedTeam);
-    
-    // 3. Update State untuk Client (Visual "1/2 Players")
     gameState.rematchCount = rematchVotes.size;
 
-    // 4. Cek apakah kedua player sudah setuju?
     if (rematchVotes.has(0) && rematchVotes.has(1)) {
         console.log("BOTH PLAYERS READY -> RESET GAME");
-        
-        // A. RESET STATE TOTAL
         gameState = createGameState(); 
+        
+        // Pastikan Pause Reset
+        gameState.paused = false;
+        gameState.pauseEndTime = null;
 
-        // B. ACAK FACTION (Opsional: Tukar Faction Team 0 dan 1)
-        // Secara default createGameState kasih Team 0 Solaris.
-        // Kita acak 50/50:
         if (Math.random() > 0.5) {
             gameState.players[0].faction = 'noctis';
             gameState.players[1].faction = 'solaris';
         }
-
-        // C. RESET VOTES
         rematchVotes.clear();
-        
-        // State baru (Phase: 'battle', Tick: 0) akan terkirim otomatis
-        // di tick gameLoop berikutnya.
     }
   });
 
   socket.on("disconnect", () => {
     console.log(`Client disconnected: ${socket.id}`);
     
+    // Cek Team 0
     if (sessions[0] === socket.id) {
         sessions[0] = null;
-        gameState.players[0].connected = false; // Tandai disconnected
+        gameState.players[0].connected = false; 
         
-        // [TOAST] Player Solaris keluar
-        io.emit("toast", { msg: "Player Solaris (Blue) Disconnected!", type: "error" });
+        io.emit("toast", { msg: "Player Solaris Disconnected! Game Paused.", type: "error" });
         
-        // Reset rematch vote jika dia keluar
+        // [NEW] Trigger Pause Logic
+        handlePlayerDisconnect(0);
+
         if (rematchVotes.has(0)) { rematchVotes.delete(0); gameState.rematchCount = rematchVotes.size; }
     }
 
+    // Cek Team 1
     if (sessions[1] === socket.id) {
         sessions[1] = null;
-        gameState.players[1].connected = false; // Tandai disconnected
+        gameState.players[1].connected = false;
 
-        // [TOAST] Player Noctis keluar
-        io.emit("toast", { msg: "Player Noctis (Red) Disconnected!", type: "error" });
+        io.emit("toast", { msg: "Player Noctis Disconnected! Game Paused.", type: "error" });
+
+        // [NEW] Trigger Pause Logic
+        handlePlayerDisconnect(1);
 
         if (rematchVotes.has(1)) { rematchVotes.delete(1); gameState.rematchCount = rematchVotes.size; }
     }
   });
 });
+
+function handlePlayerDisconnect(teamId) {
+    if (gameState.phase !== 'battle') return; // Kalau game belum mulai/sudah kelar, abaikan
+
+    // 1. Set State Paused
+    gameState.paused = true;
+    gameState.disconnectedTeam = teamId;
+    gameState.pauseReason = `Waiting for Player ${teamId === 0 ? "Solaris" : "Noctis"}...`;
+    gameState.pauseEndTime = Date.now() + PAUSE_DURATION_MS;
+
+    // 2. Bersihkan timer lama jika ada (double safety)
+    if (disconnectTimers[teamId]) clearTimeout(disconnectTimers[teamId]);
+
+    // 3. Mulai Timer 1 Menit
+    console.log(`Team ${teamId} disconnected. Pausing for 60s.`);
+    
+    disconnectTimers[teamId] = setTimeout(() => {
+        // JIKA WAKTU HABIS DAN MASIH KOSONG:
+        if (sessions[teamId] === null) {
+            console.log(`Team ${teamId} timed out. Forfeit.`);
+            
+            gameState.paused = false;
+            gameState.phase = "ended";
+            gameState.pauseEndTime = null;
+            
+            // Lawan Menang
+            gameState.winner = (teamId === 0) ? 1 : 0;
+            
+            io.emit("toast", { 
+                msg: `Player ${teamId === 0 ? "Solaris" : "Noctis"} timed out! Opponent wins!`, 
+                type: "info" 
+            });
+        }
+    }, PAUSE_DURATION_MS);
+}
+
+function handlePlayerConnect(teamId) {
+    // 1. Matikan Timer jika ada
+    if (disconnectTimers[teamId]) {
+        clearTimeout(disconnectTimers[teamId]);
+        disconnectTimers[teamId] = null;
+    }
+
+    // 2. Cek apakah game bisa dilanjutkan?
+    // Game lanjut jika KEDUA kursi terisi
+    if (sessions[0] !== null && sessions[1] !== null) {
+        if (gameState.paused) {
+            console.log("Both players present. Resuming game.");
+            gameState.paused = false;
+            gameState.pauseEndTime = null;
+            gameState.pauseReason = null;
+            gameState.disconnectedTeam = -1;
+            
+            io.emit("toast", { msg: "Game Resumed!", type: "success" });
+        }
+    }
+}
 
 server.listen(8000, () => {
   console.log("Server running on port 8000");

@@ -462,3 +462,79 @@ button:disabled {
   font-size: 14px;
   font-style: italic;
 }
+
+#pause-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.85); /* Gelap Transparan */
+  z-index: 2000; /* Di atas segalanya */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px);
+  transition: opacity 0.3s;
+}
+
+#pause-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pause-content {
+  text-align: center;
+  color: #fff;
+  border: 2px solid var(--gold);
+  background: var(--panel-bg);
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 0 50px rgba(0,0,0,1);
+  min-width: 300px;
+}
+
+.pause-content h1 {
+  font-family: var(--font-title);
+  color: var(--gold);
+  margin: 0 0 10px 0;
+  font-size: 32px;
+  letter-spacing: 2px;
+}
+
+#pause-reason {
+  color: #ccc;
+  font-size: 16px;
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+/* Timer Circle */
+.timer-ring {
+  width: 80px; height: 80px;
+  border: 4px solid #333;
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  margin: 0 auto 20px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: spin-timer 1s linear infinite; /* Putar visual ring */
+}
+
+#pause-timer {
+  font-family: var(--font-title);
+  font-size: 32px;
+  font-weight: bold;
+  color: #fff;
+  animation: none; /* Angka jangan ikut muter */
+  /* Counter-rotate agar angka tetap tegak saat ring berputar (Trick) 
+     ATAU hapus animasi spin di parent jika ingin statis. 
+     Untuk simpel, kita hapus animasi spin di parent dan buat border statis saja 
+     atau pakai SVG. Kita pakai statis saja biar mudah dibaca. */
+}
+.timer-ring { animation: none; border-color: var(--gold); }
+
+.pause-subtext {
+  font-size: 12px;
+  color: #666;
+  margin: 0;
+}

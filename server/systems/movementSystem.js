@@ -7,6 +7,7 @@ import {
 } from "../../shared/constants.js";
 import { distance } from "../utils/math.js";
 import { dealAreaDamage } from "../utils/combat.js";
+import { getOmenMultiplier } from "./omenSystem.js"; // [NEW]
 
 const BUILDING_RADIUS = 1.0;
 const SEPARATION_FORCE = 2.0;
@@ -17,6 +18,8 @@ export function updateMovement(gameState, dt) {
   const units = gameState.units;
   const buildings = gameState.buildings;
   const allEntities = [...units, ...buildings];
+  
+  const speedMult = getOmenMultiplier(gameState, "speed"); // [NEW]
 
   for (const unit of units) {
     if (unit.hp <= 0) continue;
@@ -101,9 +104,19 @@ export function updateMovement(gameState, dt) {
     let separationX = 0,
       separationY = 0,
       neighbors = 0;
-    for (const other of units) {
-      if (unit === other) continue;
 
+    // [OPTIMIZATION] Grid Query for neighbors
+    // Check radius = Unit Radius + Max Other Radius (~1.0) + Buffer
+    let potentialColliders = units; // Default Fallback
+    if (gameState.spatialHash) {
+        potentialColliders = gameState.spatialHash.query(unit.col, unit.row, unit.radius + 1.5);
+    }
+
+    for (const other of potentialColliders) {
+      if (unit === other) continue;
+      // Skip jika other adalah Building (kita handle building terpisah di bawah)
+      if (other.entityType === 'building') continue; 
+      
       let px = unit.col - other.col;
       let py = unit.row - other.row;
       let dist = Math.sqrt(px * px + py * py);
@@ -128,15 +141,24 @@ export function updateMovement(gameState, dt) {
 
     // BUILDING COLLISION
     if (unit.movementType !== "flying") {
-      for (const b of buildings) {
+      // Kita bisa reuse potentialColliders jika spatialHash memasukkan building juga
+      // Tapi loop existing di atas men-skip building.
+      // Jadi kita iterate potentialColliders lagi khusus building?
+      // Atau gabung logicnya? Biar aman pisah dulu, tapi pakai list yang sama.
+      
+      for (const b of potentialColliders) {
+        if (b.entityType !== 'building') continue;
         if (b.hp <= 0) continue;
+        
         const dx = unit.col - b.col;
         const dy = unit.row - b.row;
         const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // ... (Logic Collision Tetap Sama)
         if (dist < 0.0001) {
-          moveY += 5.0; // Dorong ke bawah
-          moveX += 1.0; // Dorong sedikit ke kanan biar gak lurus kaku
-          continue; // Skip kalkulasi fisika normal frame ini
+          moveY += 5.0; 
+          moveX += 1.0; 
+          continue; 
         }
 
         const minDist = unit.radius - 0.3 + BUILDING_RADIUS;
@@ -338,7 +360,7 @@ export function updateMovement(gameState, dt) {
         const actualLimit = isFinalLeg ? stopDistance : 0.1;
 
         if (pl > actualLimit) {
-          let currentSpeed = unit.speed;
+          let currentSpeed = unit.speed * speedMult; // [NEW] Apply Omen
           if (unit.isCharging && unit.traits.charge) {
             currentSpeed *= unit.traits.charge.speedMult;
           }
@@ -369,35 +391,56 @@ export function updateMovement(gameState, dt) {
 
     // RIVER WALL LOGIC
     if (unit.movementType === "ground") {
-      const inRiverZone = nextRow > RIVER_TOP_BANK && nextRow < RIVER_BOT_BANK;
-      if (inRiverZone) {
-        const isMounted = unit.traits.mounted === true;
-        const BRIDGE_WIDTH = 1.5;
-        if (!isMounted) {
-          const onBridgeLeft =
-            Math.abs(nextCol - BRIDGE_COLUMNS[0]) < BRIDGE_WIDTH;
-          const onBridgeRight =
-            Math.abs(nextCol - BRIDGE_COLUMNS[1]) < BRIDGE_WIDTH;
-          if (!onBridgeLeft && !onBridgeRight && !unit.isCrossing) {
-            if (
-              Math.abs(unit.row - RIVER_TOP_BANK) <
-              Math.abs(unit.row - RIVER_BOT_BANK)
-            ) {
-              unit.row = RIVER_TOP_BANK - 0.1;
-            } else {
-              unit.row = RIVER_BOT_BANK + 0.1;
-            }
-          } else unit.isCrossing = true;
-        } else {
-          unit.isCrossing = true;
-        }
-      } else {
-        if (
-          unit.row < RIVER_TOP_BANK - 0.5 ||
-          unit.row > RIVER_BOT_BANK + 0.5
-        ) {
-          unit.isCrossing = false;
-        }
+      const inRiverRow = nextRow > RIVER_TOP_BANK && nextRow < RIVER_BOT_BANK;
+      
+      if (inRiverRow) {
+          // Check if on any bridge
+          const BRIDGE_HALF_WIDTH = 1.7; // Radius 1.5 + Buffer
+          let safeOnBridge = false;
+          
+          for (const bridgeCol of BRIDGE_COLUMNS) {
+              if (Math.abs(nextCol - bridgeCol) <= BRIDGE_HALF_WIDTH) {
+                  safeOnBridge = true;
+                  break;
+              }
+          }
+          
+          if (!safeOnBridge) {
+              // COLLISION WITH WATER
+              
+              // Determine enter direction based on OLD position
+              const wasInRiverY = unit.row > RIVER_TOP_BANK && unit.row < RIVER_BOT_BANK;
+              
+              if (!wasInRiverY) {
+                  // Scenario A: Walking from Land into River -> Block Y
+                  // Snap back to bank
+                  if (unit.row <= RIVER_TOP_BANK) {
+                     nextRow = RIVER_TOP_BANK - 0.1;
+                  } else {
+                     nextRow = RIVER_BOT_BANK + 0.1;
+                  }
+                  // We allow X movement so they can slide along the bank
+              } else {
+                  // Scenario B: Walking off the Bridge sideways -> Block X
+                  // We are already 'in' the river Y-band, so we must be on a bridge (or bugged).
+                  // Clamp X to the bridge edge.
+                  
+                  // Find which bridge we are on/near
+                  let bestBridgeCol = BRIDGE_COLUMNS[0];
+                  let minD = Infinity; 
+                  for (const bc of BRIDGE_COLUMNS) {
+                      const d = Math.abs(unit.col - bc);
+                      if (d < minD) { minD = d; bestBridgeCol = bc; }
+                  }
+                  
+                  // Clamp
+                  if (nextCol < bestBridgeCol) {
+                      nextCol = bestBridgeCol - BRIDGE_HALF_WIDTH + 0.01;
+                  } else {
+                      nextCol = bestBridgeCol + BRIDGE_HALF_WIDTH - 0.01;
+                  }
+              }
+          }
       }
     }
 

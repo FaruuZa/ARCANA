@@ -6,21 +6,37 @@ import { updateAttacks } from "./systems/attackSystem.js";
 import { updateProjectiles } from "./systems/projectileSystem.js"; 
 import { updateBuffs } from "./systems/buffSystem.js"; // [NEW]
 import { cleanupSystem } from "./systems/cleanupSystem.js";
-import { MAX_ARCANA, ARCANA_REGEN_PER_SEC } from "../shared/constants.js"; // Import constants
+import { processDeaths } from "./systems/deathSystem.js"; // [FIX] Import
+import { updateSpells } from "./systems/spellSystem.js"; // [NEW]
+import { MAX_ARCANA, ARCANA_REGEN_PER_SEC } from "../shared/constants.js"; // [FIX] Re-add
+import { getOmenMultiplier } from "./systems/omenSystem.js"; // [NEW]
 
 export function gameLoop(gameState, dt) {
+  // 0. Update Spatial Hash (Start of Frame)
+  gameState.spatialHash.clear();
+  const allEntities = [...gameState.units, ...gameState.buildings];
+  for (const ent of allEntities) {
+      if (ent.hp > 0) gameState.spatialHash.insert(ent);
+  }
+
   // Update Systems
-  updateBuffs(gameState, dt); // [NEW]
+  updateSpells(gameState, dt);
+  updateBuffs(gameState, dt);
   updateTargeting(gameState, dt);
   updateMovement(gameState, dt);
   updateAttacks(gameState, dt);
   updateProjectiles(gameState, dt);
   
+  // [FIX] Process Deaths BEFORE Cleanup
+  processDeaths(gameState);
+  
+  const regenMult = getOmenMultiplier(gameState, 'arcana_regen'); // [NEW]
+
   for (const teamId in gameState.players) {
       const player = gameState.players[teamId];
       
       if (player.arcana < MAX_ARCANA) {
-          player.arcana += ARCANA_REGEN_PER_SEC * dt;
+          player.arcana += ARCANA_REGEN_PER_SEC * regenMult * dt; // [NEW] Apply Multiplier
           
           // Clamp agar tidak lebih
           if (player.arcana > MAX_ARCANA) {

@@ -1,6 +1,9 @@
-import { GRID, LANE_COLUMNS, BASE_SPEED_TILES_PER_SEC } from "../shared/constants.js";
-import { createBuilding } from "./entity/building.js";
+import { GRID, LANE_COLUMNS, BASE_SPEED_TILES_PER_SEC, DECK_SIZE, HAND_SIZE, PREP_DURATION, TOWER_POSITIONS } from "../shared/constants.js";
+import { createBuilding } from "./entity/building.js"; // [FIX] Import
 import { createUnit } from "./entity/unit.js";
+import { SpatialHash } from "./utils/spatialHash.js";
+
+import { CARDS } from "../shared/data/cards.js"; // [NEW] Need CARDS for auto-fill
 
 // Helper: Acak Array
 function shuffle(array) {
@@ -14,77 +17,162 @@ function shuffle(array) {
   return array;
 }
 
-// Helper: Buat Deck Starter
-function createStarterDeck() {
-  const deck = [
-      "vessel_golem", "vessel_assassin", "vessel_electro", "vessel_giant_skeleton", "vessel_paladin"
-    ];
-  return shuffle(deck);
+// Helper: Buat Deck Starter (AUTO-FILL)
+// Digunakan jika user tidak memilih deck sampai waktu habis
+export function createRandomDeck(faction) {
+  const validCards = Object.values(CARDS).filter(c => {
+      // Logic Faction Validation
+      if (!c.isToken) return true;
+      if (c.minFaction === 'neutral') return true;
+      if (c.minFaction === faction) return true;
+      return false;
+  });
+  
+  // Taboo logic (Optional limit) could go here but kept simple for auto-fill
+  
+  const deck = [];
+  while (deck.length < DECK_SIZE && validCards.length > 0) {
+      const idx = Math.floor(Math.random() * validCards.length);
+      deck.push(validCards[idx].id);
+      // Allow duplicates? Or unique for starter?
+      // Usually unique is safer for variety
+      validCards.splice(idx, 1);
+  }
+  return deck;
+}
+
+// Helper: Create Player State
+function createPlayerState(faction) {
+  // Deck Kosong di awal (Menunggu Submit)
+  return {
+    id: null,
+    faction: faction,
+    arcana: 5, 
+    maxArcana: 10,
+
+    // NEW DECK SYSTEM
+    deck: [], // Pool of 10 Cards
+    hand: [], // 5 Cards
+    
+    connected: false,
+    ready: false // [NEW] Status Deck Submitted
+  };
+}
+
+
+
+// Helper: Create Towers
+function createTowers(startId) {
+  const towers = [];
+  let id = startId;
+
+  // Team 0 (Bottom)
+  // King Tower
+  towers.push(createBuilding({
+    id: id++,
+    team: 0,
+    type: 'king',
+    col: TOWER_POSITIONS.KING_COL,
+    row: TOWER_POSITIONS.KING_ROW_OFFSET,
+    hp: 4000,
+    damage: 20,
+    range: 7.0,
+    radius: 1.5
+  }));
+
+  // Side Towers
+  towers.push(createBuilding({
+    id: id++,
+    team: 0,
+    type: 'side',
+    col: TOWER_POSITIONS.SIDE_LEFT_COL,
+    row: TOWER_POSITIONS.SIDE_ROW_OFFSET,
+    hp: 2500,
+    damage: 15,
+    range: 7.5
+  }));
+  
+  towers.push(createBuilding({
+    id: id++,
+    team: 0,
+    type: 'side',
+    col: TOWER_POSITIONS.SIDE_RIGHT_COL,
+    row: TOWER_POSITIONS.SIDE_ROW_OFFSET,
+    hp: 2500,
+    damage: 15,
+    range: 7.5
+  }));
+
+  // Team 1 (Top)
+  const TOP_ROW = GRID.rows - 1;
+  
+  // King Tower
+  towers.push(createBuilding({
+    id: id++,
+    team: 1,
+    type: 'king',
+    col: TOWER_POSITIONS.KING_COL,
+    row: TOP_ROW - TOWER_POSITIONS.KING_ROW_OFFSET,
+    hp: 4000,
+    damage: 20,
+    range: 7.0,
+    radius: 1.5
+  }));
+
+  // Side Towers
+  towers.push(createBuilding({
+    id: id++,
+    team: 1,
+    type: 'side',
+    col: TOWER_POSITIONS.SIDE_LEFT_COL,
+    row: TOP_ROW - TOWER_POSITIONS.SIDE_ROW_OFFSET,
+    hp: 2500,
+    damage: 15,
+    range: 7.5
+  }));
+
+  towers.push(createBuilding({
+    id: id++,
+    team: 1,
+    type: 'side',
+    col: TOWER_POSITIONS.SIDE_RIGHT_COL,
+    row: TOP_ROW - TOWER_POSITIONS.SIDE_ROW_OFFSET,
+    hp: 2500,
+    damage: 15,
+    range: 7.5
+  }));
+
+  return towers;
 }
 
 export function createGameState() {
-  let nextId = 1000;
-  const towers = [];
-
-  // Helper Setup Tower
-  const addTower = (team, type, col, rowOffset) => {
-    const row = team === 0 ? rowOffset : (GRID.rows - 1) - rowOffset; 
-    towers.push(createBuilding({
-      id: nextId++, team, type, col, row,
-      hp: type === 'king' ? 3000 : 1500,
-      range: type === 'king' ? 9.5 : 8.5
-    }));
-  };
-
-  // Setup Tower (Posisi Final)
-  [0, 1].forEach(team => {
-    addTower(team, 'side', 3, 6);
-    addTower(team, 'king', 9, 3);
-    addTower(team, 'side', 15, 6);
-  });
-
-  // --- INITIALIZE PLAYERS DENGAN HAND & DECK ---
-  const players = {};
-  [0, 1].forEach(team => {
-      const fullDeck = createStarterDeck();
-      
-      // Ambil 6 kartu pertama sebagai Hand
-      const hand = fullDeck.splice(0, 5);
-      
-      // Ambil 1 kartu berikutnya sebagai Next
-      const nextCard = fullDeck.pop();
-
-      players[team] = {
-        id: null,
-        faction: team === 0 ? 'solaris' : 'noctis',
-        arcana: 5, // Modal awal 5
-        maxArcana: 10,
-        
-        // State Kartu Baru
-        deck: fullDeck, 
-        hand: hand,     
-        next: nextCard,
-        connected: false,
-      };
-  });
-
+  const nextId = 1;
+  const towers = createTowers(nextId);
+  
   return {
     tick: 0,
-    phase: "battle", // 'battle', 'paused', 'ended'
-    players: players,
+    phase: "preparation", // [NEW] Start at Prep
+    prepEndTime: Date.now() + PREP_DURATION, // [NEW] Timer
+    
+    players: {
+      0: createPlayerState('solaris'),
+      1: createPlayerState('noctis')
+    },
+    
+    // ...
     winner: null,
     units: [],
     buildings: towers,
     projectiles: [],
-    effects: [], // Menyimpan data visual sementara (ledakan, spawn, dll)
-    nextEntityId: nextId,
+    effects: [], 
+    activeSpells: [],
+    spatialHash: new SpatialHash(2.0),
+    nextEntityId: nextId + towers.length + 1, 
     rematchCount: 0,
-
     paused: false,
-    pauseReason: null,     // "Waiting for Solaris..."
-    pauseEndTime: null,    // Timestamp kapan auto-win terjadi (Date.now() + 60000)
-    disconnectedTeam: -1   // ID Tim yang sedang DC
-
+    pauseReason: null,     
+    pauseEndTime: null,   
+    disconnectedTeam: -1
   };
 }
 
@@ -135,4 +223,5 @@ export function spawnUnit(state, data) {
     });
     
     state.units.push(unit);
+    return unit;
 }

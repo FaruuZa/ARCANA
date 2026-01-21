@@ -88,11 +88,91 @@ export function castRitual(gameState, playerId, teamId, cardId, targetPos) {
             time: 0.5
         });
     }
+
+    // --- TIPE 3: LINGERING ZONE (Poison Cloud, Blizzard, Healing Ward) ---
+    else if (spell.type === "zone_lingering") {
+        gameState.activeSpells.push({
+            id: gameState.nextEntityId++,
+            team: teamId,
+            col: targetPos.col,
+            row: targetPos.row,
+            radius: spell.radius,
+            duration: spell.duration,
+            interval: spell.interval || 0.5,
+            tickTimer: 0, // Tick immediately? Or wait? Let's wait 'interval' first or 0.1
+            
+            damage: spell.damage || 0,
+            buffs: spell.buffs || [],
+            targetTeam: spell.targetTeam || 'enemy' 
+        });
+
+        // Visual Awal (Spawn Circle)
+        gameState.effects.push({
+            id: gameState.nextEntityId++,
+            type: "circle_zone", 
+            col: targetPos.col,
+            row: targetPos.row,
+            radius: spell.radius,
+            duration: spell.duration, // Client bisa render lingkaran selama duration
+            time: spell.duration
+        });
+    }
 }
 
-// (OPSIONAL) Fungsi Update untuk Spell yang memiliki durasi di tanah (Blizzard, Poison Cloud)
-// Nanti dipanggil di gameLoop
+// [Implemented] Update Lingering Spells
 export function updateSpells(gameState, dt) {
-    // Jika nanti kamu punya spell yang "nempel" di tanah (Zone),
-    // Kamu simpan di gameState.activeSpells dan loop disini.
+    const activeSpells = gameState.activeSpells;
+
+    for (let i = activeSpells.length - 1; i >= 0; i--) {
+        const spell = activeSpells[i];
+        
+        spell.duration -= dt;
+        spell.tickTimer -= dt;
+
+        if (spell.tickTimer <= 0) {
+            spell.tickTimer = spell.interval; // Reset timer
+
+            // LOGIC AREA EFFECT
+            // Jika ada damage, pakai dealAreaDamage (bisa sekalian apply buff hit)
+            // Jika HANYA buff (tanpa damage), manual scan.
+
+            if (spell.damage > 0) {
+                 dealAreaDamage(
+                    gameState, 
+                    spell, // Origin {col, row}
+                    spell.radius, 
+                    spell.damage, 
+                    spell.team, 
+                    'both', 
+                    spell.targetTeam, // 'enemy' / 'ally' / 'any'
+                    spell.buffs // Pass buffs ke onHitEffects
+                );
+            } else if (spell.buffs && spell.buffs.length > 0) {
+                // Manual Scan untuk Buff Only (e.g. Healing Ward)
+                const entities = [...gameState.units, ...gameState.buildings];
+                for (const entity of entities) {
+                    if (entity.hp <= 0) continue;
+                    
+                    let isValid = false;
+                    if (spell.targetTeam === 'ally' && entity.team === spell.team) isValid = true;
+                    if (spell.targetTeam === 'enemy' && entity.team !== spell.team) isValid = true;
+                    if (spell.targetTeam === 'any') isValid = true;
+
+                    if (isValid && distance(spell, entity) <= spell.radius) {
+                        // Apply All Buffs
+                        spell.buffs.forEach(b => {
+                            applyBuff(entity, { 
+                                ...b, 
+                                sourceId: spell.id 
+                            });
+                        });
+                    }
+                }
+            }
+        }
+
+        if (spell.duration <= 0) {
+            activeSpells.splice(i, 1);
+        }
+    }
 }

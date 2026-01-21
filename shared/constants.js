@@ -36,3 +36,12 @@ export const TOWER_POSITIONS = {
 export const BASE_SPEED_TILES_PER_SEC = 5.0;
 export const MAX_ARCANA = 10;
 export const ARCANA_REGEN_PER_SEC = 0.5;
+
+// --- PHYSICS CONSTANTS ---
+export const UNIT_RADIUS_DEFAULT = 0.5;
+export const BUILDING_RADIUS = 1.0;
+// --- DECK BUILDING ---
+export const DECK_SIZE = 10;
+export const HAND_SIZE = 5;
+export const PREP_DURATION = 0; // 60s
+export const MAX_TABOO_CARDS = 1; // Opsional limit

@@ -40,7 +40,7 @@ export function updateTargeting(gameState, dt) {
 
     // 3. Scan Target Baru (Jika Idle)
     if (unit.intent.type === 'idle') {
-        const bestTarget = scanForTarget(unit, allEntities);
+        const bestTarget = scanForTarget(unit, allEntities, gameState); // Pass logic gameState
         if (bestTarget) {
             // Ubah Niat: ENGAGE!
             unit.intent = { type: 'engage', targetId: bestTarget.id };
@@ -49,15 +49,24 @@ export function updateTargeting(gameState, dt) {
   }
 }
 
-// Helper Scan (Logic Priority sama seperti sebelumnya)
-function scanForTarget(unit, allEntities) {
+// Helper Scan with Spatial Grid
+function scanForTarget(unit, allEntities, gameState) {
+    // [OPTIMIZATION] Use Spatial Hash if available
+    let candidates = allEntities;
+    if (gameState && gameState.spatialHash) {
+        // Query area sekitar sightRange
+        // Kita tambah buffer sedikit (+1.0) untuk memastikan radius penuh tercover
+        const queryRadius = unit.sightRange;
+        candidates = gameState.spatialHash.query(unit.col, unit.row, queryRadius);
+    }
+
     if (unit.targetTeam === 'ally') {
         // --- Logic Healer ---
         let bestTarget = null;
         let lowestHpPct = 1.0; 
         let closestDist = unit.sightRange;
 
-        for (const other of allEntities) {
+        for (const other of candidates) {
             if (other.hp <= 0 || other.id === unit.id) continue;
             if (!isValidTarget(unit, other)) continue; 
 
@@ -77,7 +86,7 @@ function scanForTarget(unit, allEntities) {
         // --- Logic Attacker ---
         let closestTarget = null;
         let minDist = unit.sightRange; 
-        for (const other of allEntities) {
+        for (const other of candidates) {
             if (other.hp <= 0 || other.id === unit.id) continue;
             if (!isValidTarget(unit, other)) continue;
             

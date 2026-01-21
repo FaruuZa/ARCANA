@@ -1,5 +1,6 @@
 import { distance } from "./math.js";
-import { spawnUnit } from "../gameState.js"; // [FIX] Import spawnUnit
+import { spawnUnit } from "../gameState.js"; 
+import { CARDS } from "../../shared/data/cards.js";
 
 // [HELPER] Apply Buff
 export function applyBuff(target, buffData) {
@@ -27,12 +28,20 @@ export function applyBuff(target, buffData) {
 export function dealAreaDamage(gameState, origin, radius, damage, attackerTeam, targetHeight = 'both', targetRule = 'enemy', onHitEffects = []) {
     const units = gameState.units;
     const buildings = gameState.buildings;
-    const allEntities = [...units, ...buildings];
+    
+    // [OPTIMIZATION] Search Candidates via Grid
+    let potentialTargets = [...units, ...buildings];
+    if (gameState.spatialHash) {
+        potentialTargets = gameState.spatialHash.query(origin.col, origin.row, radius + 1.0);
+    }
 
     let hitCount = 0;
 
-    for (const entity of allEntities) {
+    for (const entity of potentialTargets) {
         if (entity.hp <= 0) continue;
+        
+        // Cek ID agar tidak hit diri sendiri? (Biasanya area effect OK hit diri, tapi cek logic asli)
+        // logic asli tidak cek ID.
         
         let isTeamValid = false;
         if (targetRule === 'both') isTeamValid = true;
@@ -120,16 +129,43 @@ export function triggerTraitEffect(gameState, sourceUnit, effectData) {
     // 3. EFEK SPAWN MINION (Golem / Tombstone)
     else if (effectData.type === 'spawn') {
         const count = effectData.count || 1;
+        const cardData = CARDS[effectData.unitId];
+        
+        if (!cardData) return;
+
         for(let i=0; i<count; i++) {
-            const offsetX = (Math.random() - 0.5) * 1.5; // Spread sedikit
+            const offsetX = (Math.random() - 0.5) * 1.5; 
             const offsetY = (Math.random() - 0.5) * 1.5;
             
+            // Logic row validation (mirip server.js)
+            // Tapi simple saja, clamp ke map
+            let spawnCol = Math.max(1, Math.min(17, sourceUnit.col + offsetX));
+            let spawnRow = sourceUnit.row + offsetY;
+
             spawnUnit(gameState, {
                 cardId: effectData.unitId,
                 team: sourceUnit.team,
-                col: Math.max(1, Math.min(17, sourceUnit.col + offsetX)),
-                row: sourceUnit.row + offsetY,
-                // Stats default ambil dari cardId di spawnUnit gameState
+                col: spawnCol,
+                row: spawnRow,
+                
+                // COPY STATS DARI KARTU
+                hp: cardData.stats.hp,
+                damage: cardData.stats.damage,
+                range: cardData.stats.range,
+                sightRange: cardData.stats.sightRange,
+                speed: cardData.stats.speed,
+                attackSpeed: cardData.stats.attackSpeed,
+                deployTime: 1.0, // Instan or fast deploy?
+                aimTime: cardData.stats.aimTime,
+                
+                movementType: cardData.stats.movementType,
+                targetTeam: cardData.stats.targetTeam,
+                targetRule: cardData.stats.targetRule,
+                targetHeight: cardData.stats.targetHeight,
+                
+                aoeRadius: cardData.stats.aoeRadius || 0,
+                aoeType: cardData.stats.aoeType || 'target',
+                traits: cardData.stats.traits || {}
             });
         }
     }

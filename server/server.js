@@ -3,12 +3,12 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Server } from "socket.io";
-import { createGameState, spawnUnit } from "./gameState.js";
+import { createGameState, createRandomDeck } from "./gameState.js";
 import { gameLoop } from "./gameLoop.js";
-import { CARDS } from "../shared/data/cards.js";
-import { isValidPlacement } from "./rules/placement.js";
-import { castRitual } from "./systems/spellSystem.js";
-import { processDeaths } from "./systems/deathSystem.js";
+import { playUnitCard, playSpellCard } from "./systems/cardSystem.js";
+import { DECK_SIZE, HAND_SIZE, MAX_TABOO_CARDS} from "../shared/constants.js"; // Note: CARDS in constants or data? 
+import { CARDS } from "../shared/data/cards.js"; // Import CARDS data
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,8 +18,53 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 let gameState = createGameState();
-const TICK_RATE = 1000 / 30; // 30 ticks per second
-const DT = TICK_RATE / 1000; // delta time in seconds
+const FPS = 30; 
+const TICK_RATE = 1000 / FPS; // MS per tick (33.33ms)
+const DT = 1 / FPS; // Delta Time in Seconds (0.033s)
+// Helper: Start Battle
+
+import { rollOmen } from "./systems/omenSystem.js"; // [NEW]
+
+function startBattle(gameState) {
+    if (gameState.phase === 'battle') return;
+
+    console.log("Starting Battle!");
+    gameState.phase = 'battle';
+    gameState.prepEndTime = null; 
+
+    // [NEW] Roll Omen
+    const omen = rollOmen(gameState);
+    if (omen) {
+        console.log(`[OMEN] Effect Triggered: ${omen.name}`);
+        io.emit("toast", { msg: `OMEN: ${omen.name} - ${omen.description}`, type: "warning" });
+    } else {
+        console.log("[OMEN] No effect this battle.");
+    }
+
+    // Initialize Hands for everyone
+    [0, 1].forEach(teamId => {
+        const player = gameState.players[teamId];
+        
+        // Final Auto-Fill (safety)
+        if (player.deck.length !== DECK_SIZE) {
+            player.deck = createRandomDeck(player.faction);
+        }
+
+        // Draw Initial Hand (Random 5)
+        player.hand = [];
+        for (let i = 0; i < HAND_SIZE; i++) {
+            const randomCardId = player.deck[Math.floor(Math.random() * player.deck.length)];
+            player.hand.push(randomCardId);
+        }
+        // Next Card (Just visual preview of 'next possible'? Or just another random?)
+        // In this system, "Next" might just be "Random Choice". 
+        // For visual consistency, let's pick one.
+        player.next = player.deck[Math.floor(Math.random() * player.deck.length)];
+    });
+
+    io.emit("toast", { msg: "Battle Started!", type: "success" });
+    io.emit("state", gameState); // Sync full state
+}
 
 const sessions = {
   0: null, // Socket ID untuk Team 0
@@ -36,11 +81,17 @@ const PAUSE_DURATION_MS = 60000; // 1 Menit
 let rematchVotes = new Set();
 
 setInterval(() => {
+    // [NEW] PREPARATION TIMER LOGIC
+    if (!gameState.paused && gameState.phase === "preparation") {
+        if (Date.now() > gameState.prepEndTime) {
+            console.log("Preparation Time Limit Reached!");
+            startBattle(gameState);
+        }
+    }
 
-  if (!gameState.paused && gameState.phase === "battle") {
-    gameLoop(gameState, DT);
-    processDeaths(gameState);
-  }
+    if (!gameState.paused && gameState.phase === "battle") {
+        gameLoop(gameState, DT);
+    }
 
   const packet = {
     ...gameState, // Copy data game
@@ -50,51 +101,40 @@ setInterval(() => {
   io.emit("state", packet);
 }, TICK_RATE);
 
+// ...
+
+
+
+  // ... (Other handlers)
+
+
 app.use(express.static(path.join(__dirname, "../client")));
 app.use("/shared", express.static(path.join(__dirname, "../shared")));
 
-function processCardUsage(playerState, cardInfo, cardId) {
-  const cardIndex = playerState.hand.indexOf(cardId);
-  if (cardIndex === -1) return false; // Kartu gak ada di tangan (Cheat?)
 
-  if (playerState.arcana < cardInfo.cost) return false; // Duit gak cukup
-
-  // 1. Bayar
-  playerState.arcana -= cardInfo.cost;
-
-  // 2. Buang Kartu
-  playerState.hand.splice(cardIndex, 1);
-
-  // 3. Tarik Kartu Baru
-  if (playerState.deck.length === 0) {
-    // Refill deck (Logic sederhana)
-    playerState.deck = [
-      "vessel_cavalry", 'vessel_assassin', 'vessel_silencer', 'ritual_root', 'ritual_warcry', 'vessel_frost_archer', 'vessel_hammer'
-    ];
-    playerState.deck.sort(() => Math.random() - 0.5);
-  }
-  if (playerState.next) {
-    playerState.hand.push(playerState.next);
-    playerState.next = playerState.deck.pop();
-  }
-
-  return true; // Sukses
-}
-
-function getRandomOffset(radius) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = Math.sqrt(Math.random()) * radius; // Uniform distribution
-    return {
-        x: Math.cos(angle) * dist,
-        y: Math.sin(angle) * dist
-    };
-}
 
 io.on("connection", (socket) => {
-  console.log("client connected");
+  console.log("client connected", socket.id);
+
+  // === [FIX] SPECTATOR BUG ===
+  // Cek apakah slot yang "terisi" sebenarnya hantu (socket sudah tidak ada / disconnected)?
+  // Ini penting jika server tidak men-detect disconnect dengan benar sebelumnya,
+  // atau user me-refresh page dengan cepat.
+
+  for (let i = 0; i < 2; i++) {
+      if (sessions[i] !== null) {
+          // Verify if this socket ID is still valid in Socket.IO manager
+          const existingSocket = io.sockets.sockets.get(sessions[i]);
+          if (!existingSocket) {
+              console.log(`[CleanUp] Found stale session for Team ${i} (ID: ${sessions[i]}). Clearing slot.`);
+              sessions[i] = null;
+              if (gameState.players[i]) gameState.players[i].connected = false;
+          }
+      }
+  }
 
   let assignedTeam = -1;
-
+  // Cari Slot Kosong
   if (sessions[0] === null) {
     sessions[0] = socket.id;
     assignedTeam = 0;
@@ -148,62 +188,70 @@ io.on("connection", (socket) => {
     socket.emit("state", gameState);
   });
 
+  // [NEW] SUBMIT DECK HANDLER
+  socket.on("submit_deck", (cardIds) => {
+      console.log(`Player ${assignedTeam} submitting deck:`, cardIds);
+      if (assignedTeam === -1) return;
+      if (gameState.phase !== 'preparation') return;
+
+      const player = gameState.players[assignedTeam];
+      if (player.ready) return; // Already ready
+
+      // 1. Validate Deck Size
+      if (!Array.isArray(cardIds) || cardIds.length !== DECK_SIZE) {
+          socket.emit("toast", { msg: `Deck must have exactly ${DECK_SIZE} cards!`, type: "error" });
+          return;
+      }
+
+      // 2. Validate Cards
+      let tabooCount = 0;
+      for (const id of cardIds) {
+          const cardData = CARDS[id];
+          if (!cardData) {
+               socket.emit("toast", { msg: `Invalid card ID: ${id}`, type: "error" });
+               return;
+          }
+
+          // Faction Check
+          if (cardData.minFaction !== 'neutral' && cardData.minFaction !== player.faction) {
+              socket.emit("toast", { msg: `Card ${cardData.name} belongs to ${cardData.minFaction}!`, type: "error" });
+              return;
+          }
+
+          // Taboo Check
+          if (cardData.isTaboo) {
+              tabooCount++;
+          }
+      }
+
+      if (tabooCount > MAX_TABOO_CARDS) {
+          socket.emit("toast", { msg: `Max ${MAX_TABOO_CARDS} Taboo card allowed!`, type: "error" });
+          return;
+      }
+
+      // 3. Save Deck
+      player.deck = cardIds;
+      player.ready = true;
+      socket.emit("toast", { msg: "Deck Validated! Waiting for opponent...", type: "success" });
+
+      // 4. Check Start
+      const p0 = gameState.players[0];
+      const p1 = gameState.players[1];
+      if (p0.ready && p1.ready) {
+          startBattle(gameState);
+      }
+  });
+
   // === LOGIKA SPAWN YANG AMAN ===
   socket.on("spawn_unit", (data) => {
     if (assignedTeam === -1) return;
-    const playerState = gameState.players[assignedTeam];
-    const cardInfo = CARDS[data.cardId];
-    if (!cardInfo) return;
-
-    // Validasi Placement Unit (Tidak boleh di sungai/musuh)
-    if (!isValidPlacement(assignedTeam, data.col, data.row)) return;
-
-    // Proses Pembayaran & Kartu
-    if (processCardUsage(playerState, cardInfo, data.cardId)) {
-      // Jika sukses bayar -> Spawn Entity
-
-      const count = cardInfo.stats.count || 1;
-      const spawnRadius = cardInfo.stats.spawnRadius || 0.5;
-      for (let i = 0; i < count; i++) {
-        let finalCol = data.col;
-        let finalRow = data.row;
-
-        // Jika Swarm, beri offset sedikit
-        if (count > 1) {
-          const offset = getRandomOffset(spawnRadius);
-          finalCol += offset.x;
-          finalRow += offset.y;
-
-          // Clamp biar gak keluar map
-          finalCol = Math.max(1, Math.min(17, finalCol));
-          // (Row clamp tergantung team, tapi logic spawnUnit di gameState biasanya handle clamp basic)
-        }
-        spawnUnit(gameState, {
-          cardId: data.cardId,
-          team: assignedTeam,
-          col: finalCol,
-          row: finalRow,
-          // Stats Unit...
-          hp: cardInfo.stats.hp,
-          damage: cardInfo.stats.damage,
-          range: cardInfo.stats.range,
-          sightRange: cardInfo.stats.sightRange,
-          speed: cardInfo.stats.speed,
-          attackSpeed: cardInfo.stats.attackSpeed,
-          deployTime: cardInfo.stats.deployTime,
-          aimTime: cardInfo.stats.aimTime,
-          movementType: cardInfo.stats.movementType,
-          targetTeam: cardInfo.stats.targetTeam,
-          targetRule: cardInfo.stats.targetRule,
-          targetHeight: cardInfo.stats.targetHeight,
-          aoeRadius: cardInfo.stats.aoeRadius || 0,
-          aoeType: cardInfo.stats.aoeType || 'target',
-          projectileType: cardInfo.stats.projectileType || null,
-          count: count,
-          spawnRadius: spawnRadius,
-          traits: cardInfo.stats.traits || {},
-        });
-      }
+    
+    // [REFACTOR] Delegate to cardSystem
+    const success = playUnitCard(gameState, assignedTeam, data.cardId, data.col, data.row);
+    
+    if (!success) {
+        // Optional: Send error feedback to client
+        // socket.emit("error", "Invalid spawn");
     }
   });
 
@@ -213,35 +261,8 @@ io.on("connection", (socket) => {
     if (gameState.phase !== "battle") return;
     if (assignedTeam === -1) return;
 
-    // 2. Validasi Data Kartu
-    const player = gameState.players[assignedTeam];
-    const cardId = data.cardId;
-    const cardData = CARDS[cardId];
-
-    if (!cardData || cardData.type !== "RITUAL") return;
-
-    // 3. Validasi Cost & Cooldown (Basic)
-    if (player.arcana < cardData.cost) return;
-
-    // 4. Potong Mana & Putar Deck
-    player.arcana -= cardData.cost;
-    
-    // Logic putar kartu (Next -> Hand -> Deck)
-    const handIndex = player.hand.indexOf(cardId);
-    if (handIndex !== -1) {
-        player.hand[handIndex] = player.next;
-        player.next = player.deck.shift();
-        player.deck.push(cardId); 
-    }
-
-    // 5. [FIX] DELEGASIKAN LOGIKA GAME KE SYSTEM
-    castRitual(
-        gameState, 
-        socket.id, 
-        assignedTeam, 
-        cardId, 
-        { col: data.col, row: data.row } // Target Pos
-    );
+    // [REFACTOR] Delegate to cardSystem
+    playSpellCard(gameState, socket.id, assignedTeam, data.cardId, data.col, data.row);
   });
 
   socket.on("rematch_request", () => {

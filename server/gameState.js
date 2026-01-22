@@ -149,14 +149,19 @@ export function createGameState() {
   const nextId = 1;
   const towers = createTowers(nextId);
   
+  // [NEW] Random Faction Assignment
+  // 50/50 Chance who gets Solaris/Noctis
+  const factions = ['solaris', 'noctis'];
+  if (Math.random() < 0.5) factions.reverse();
+  
   return {
     tick: 0,
-    phase: "preparation", // [NEW] Start at Prep
-    prepEndTime: Date.now() + PREP_DURATION, // [NEW] Timer
+    phase: "deck_building", // [NEW] Start at Deck Building
+    prepEndTime: 0, // Reset, will be set when game actually starts (curtain drops)
     
     players: {
-      0: createPlayerState('solaris'),
-      1: createPlayerState('noctis')
+      0: createPlayerState(factions[0]),
+      1: createPlayerState(factions[1])
     },
     
     // ...
@@ -172,7 +177,9 @@ export function createGameState() {
     paused: false,
     pauseReason: null,     
     pauseEndTime: null,   
-    disconnectedTeam: -1
+    disconnectedTeam: -1,
+    
+    activeOmen: null // [NEW] Omen Slot
   };
 }
 

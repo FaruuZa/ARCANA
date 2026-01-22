@@ -2,6 +2,7 @@ import { CARDS } from "../../shared/data/cards.js";
 import { selection, selectCard, clearSelection } from "../state/selection.js";
 import { gameState, myTeamId } from "../state/gameState.js";
 import { updateGhostPosition } from "./ghost.js";
+import { toRoman } from "../../utils/common.js";
 
 const elHand = document.getElementById("hand-cards");
 
@@ -15,12 +16,10 @@ let isInfoVisible = false;
 // === MAIN UPDATE FUNCTION ===
 export function updateHand(state) {
   if (myTeamId === -1) {
-    // Bersihkan jika spectator (UI spectator dihandle ui.js)
     if (!elHand.classList.contains("spectator-mode")) elHand.innerHTML = "";
     return;
   }
 
-  // Hapus mode spectator jika player masuk kembali
   if (elHand.classList.contains("spectator-mode")) {
     elHand.innerHTML = "";
     elHand.classList.remove("spectator-mode");
@@ -33,80 +32,129 @@ export function updateHand(state) {
   const hand = myPlayer.hand || [];
   
   // === SMART DIFF RENDERING ===
-  // 1. Mark semua elemen lama
   const existingEls = Array.from(elHand.children);
   const matchedIndices = new Set();
+  const matchedCardIds = new Set(); // Track ID kartu yang sudah ada di hand
 
-  // 2. Update / Create Kartu
+  // 1. Create / Update Kartu
   hand.forEach((cardId, index) => {
     const cardData = CARDS[cardId];
     if (!cardData) return;
 
+    // Cari elemen yang sudah ada untuk kartu ini di index ini
     let cardEl = existingEls.find(el => el.dataset.index == index && el.dataset.id == cardId);
     
+    // Jika tidak ada di index yang sama, cari di mana saja (mungkin geser)
     if (!cardEl) {
         cardEl = existingEls.find(el => el.dataset.id == cardId && !matchedIndices.has(el) && !el.classList.contains("deploying"));
     }
 
     if (cardEl) {
+        // UPDATE Existing Card
         matchedIndices.add(cardEl);
-        cardEl.dataset.index = index;
-        cardEl.classList.remove("entering", "deploying", "dragging", "active", "disabled"); 
-        cardEl.style.transform = "";
-        cardEl.style.opacity = "";
+        matchedCardIds.add(cardId);
+
+        // Update index attribute if changed
+        if (cardEl.dataset.index != index) {
+            cardEl.dataset.index = index;
+            // Update interaction handler context (closure)
+            // Note: Idealnya kita tidak re-bind event listener setiap frame.
+            // Tapi karena setupCardInteractions closure ke variabel 'index', kita perlu update.
+            // Solusi bersih: simpan index di dataset dan baca dari dataset saat event trigger.
+            // Untuk sekarang, kita re-assign handler properti agar index baru terbaca.
+            cardEl.onpointerdown = null; 
+            setupCardInteractions(cardEl, cardId, index, cardData);
+        }
+        
+        // Reset state visual jika tidak sedang di-drag
+        if (!cardEl.classList.contains("dragging")) {
+             cardEl.style.transform = ""; 
+             cardEl.style.opacity = "";
+             // Hapus class entering jika sudah selesai animasi atau bukan baru
+             if (cardEl.style.animationName === 'none') {
+                 cardEl.classList.remove("entering");
+             }
+        }
+        
     } else {
+        // CREATE New Card
         cardEl = document.createElement("div");
-        cardEl.className = "hand-card entering";
+        
+        let themeClass = "card-neutral";
+        let sigilClass = "sigil-neutral";
+        
+        if (cardData.minFaction === 'solaris') { themeClass = "card-solaris"; sigilClass = "sigil-solaris"; }
+        if (cardData.minFaction === 'noctis') { themeClass = "card-noctis"; sigilClass = "sigil-noctis"; }
+        
+        // [FIX] Taboo Logic
+        if (cardData.isTaboo) {
+            themeClass = "card-taboo";
+            sigilClass = "sigil-taboo";
+        }
+        
+        // [FIX] Type Logic
+        const rawType = (cardData.type || "").toLowerCase();
+        let typeClass = 'type-spell'; 
+        let typeLabel = "SPELL"; 
+        
+        if(rawType === 'vessel' || rawType === 'unit') { typeClass = 'type-unit'; typeLabel = "VESSEL"; }
+        else if(rawType === 'ritual' || rawType === 'spell') { typeClass = 'type-spell'; typeLabel = "RITUAL"; }
+        else if(rawType === 'sanctum' || rawType === 'building') { typeClass = 'type-building'; typeLabel = "SANCTUM"; }
+
+        cardEl.className = `hand-card entering card-visual ${themeClass}`;
         cardEl.dataset.id = cardId;
         cardEl.dataset.index = index;
         
         cardEl.innerHTML = `
-            <div class="card-cost">${cardData.cost}</div>
-            <div class="card-type">${cardData.type}</div>
+            <div class="card-roman-cost">${toRoman(cardData.cost)}</div>
+            <div class="card-type-indicator ${typeClass}" title="${typeLabel}"></div>
+            <div class="card-sigil ${sigilClass}"></div>
             <div class="card-name">${cardData.name}</div>
+            <div style="position:absolute; bottom:2px; left:4px; font-size:6px; color:#888; text-transform:uppercase;">${typeLabel}</div>
         `;
         
-        // [UPDATE] Panggil setupCardInteractions yang sudah diperbaiki
         setupCardInteractions(cardEl, cardId, index, cardData);
         elHand.appendChild(cardEl);
+        
+        // Hapus class entering setelah animasi selesai
+        cardEl.addEventListener('animationend', () => {
+             cardEl.classList.remove('entering');
+        }, { once: true });
     }
 
     // HITUNG POSISI (KIPAS)
-    const isMobile = window.innerWidth <= 480;
-    const spread = isMobile ? 55 : 60; 
-    const center = (hand.length - 1) / 2;
-    const xOffset = (index - center) * spread;
-    const rotFactor = 5;
-    const rot = (index - center) * rotFactor;
-    const yFactor = isMobile ? 8 : 10;
-    const yOffset = Math.abs(index - center) * yFactor;
+    // Pastikan kalkulasi ini sinkron dengan input/drag logic
+    if (!cardEl.classList.contains("dragging")) {
+        const isMobile = window.innerWidth <= 480;
+        const spread = isMobile ? 55 : 60; 
+        const center = (hand.length - 1) / 2;
+        const xOffset = (index - center) * spread;
+        const rotFactor = 5;
+        const rot = (index - center) * rotFactor;
+        const yFactor = isMobile ? 8 : 10;
+        const yOffset = Math.abs(index - center) * yFactor;
 
-    // Set CSS Variables untuk posisi default
-    cardEl.style.setProperty("--x", `${xOffset}px`);
-    cardEl.style.setProperty("--y", `${yOffset}px`);
-    cardEl.style.setProperty("--rot", `${rot}deg`);
+        cardEl.style.setProperty("--x", `${xOffset}px`);
+        cardEl.style.setProperty("--y", `${yOffset}px`);
+        cardEl.style.setProperty("--rot", `${rot}deg`);
+    }
   });
 
-  // 3. Remove Old Cards (Deploy Animation)
+  // 2. Remove Old Cards (Deploy/Discard)
   existingEls.forEach(el => {
-      // Jika elemen ini tidak dipakai lagi di hand baru
-      // [FIX] Gunakan matchedIndices untuk memastikan elemen yang tidak terpakai benar-benar dihapus
+      // Jika elemen ini tidak ada di set matchedIndices, berarti hilang dari hand
       if (!matchedIndices.has(el) && !el.classList.contains("deploying")) {
-          // [REQUEST 4] Animasi Deploy (Ke atas & Fade Out)
-          // Kita asumsikan kartu hilang karena di-deploy
+          // Animasi keluar
           el.classList.add("deploying");
+          // Pastikan pointer events mati
+          el.style.pointerEvents = "none";
           
-          // Hapus setelah animasi selesai
           el.addEventListener("animationend", () => {
               el.remove();
           });
-      } else if (!matchedIndices.has(el)) {
-          // Fallback cleanup
-          el.remove();
       }
   });
 
-  // Selalu update status active/disabled tiap tick (karena arcana berubah terus)
   refreshCardClasses(hand, myPlayer.arcana);
 }
 
@@ -135,9 +183,16 @@ function setupCardInteractions(cardEl, cardId, index, cardData) {
     
     // Hitung offset agar kartu tidak 'teleport' ke tengah mouse saat mulai drag
     // Kita ingin memegang kartu tepat di bagian yang kita klik
+    // GUNAKAN getBoundingClientRect untuk akurasi posisi visual saat ini
     const rect = cardEl.getBoundingClientRect();
-    const offsetX = startX - (rect.left + rect.width / 2);
-    const offsetY = startY - (rect.top + rect.height / 2);
+    
+    // Offset dari Center Kartu (ini yang ingin dipertahankan relatif terhadap mouse)
+    // Mouse Pos - Card Center Pos
+    const cardCenterX = rect.left + rect.width / 2;
+    const cardCenterY = rect.top + rect.height / 2;
+    
+    const offsetX = startX - cardCenterX;
+    const offsetY = startY - cardCenterY;
 
     let isDragging = false;
     let rAF = null; // Variable untuk menyimpan ID animation frame

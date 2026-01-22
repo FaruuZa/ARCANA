@@ -214,31 +214,35 @@ canvas {
   user-select: none;
 }
 
+/* [FIX] Hover: Straighten card and lift slightly */
 .hand-card:hover {
-  z-index: 10;
+  z-index: 100;
   border-color: var(--gold);
-  transform: translateX(calc(-50% + var(--x))) rotate(var(--rot)) scale(1);
+  /* Lift less aggressively */
+  transform: translateX(calc(-50% + var(--x))) translateY(-25px) rotate(0deg) scale(1.1);
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
 }
 
 /* [NEW] Dragging State */
 .hand-card.dragging {
-  transition: transform 0s !important; /* [FIX] Hanya matikan transform, biarkan opacity transisi */
-  z-index: 100 !important;
-  pointer-events: none; /* Biar event tembus ke canvas saat drag */
+  transition: transform 0s !important; 
+  z-index: 1000 !important;
+  pointer-events: none; 
 }
 
+/* [FIX] Active: Straighten and lift slightly higher */
 .hand-card.active {
-  z-index: 20;
+  z-index: 90;
   border-color: var(--arcana-glow);
   box-shadow: 0 0 20px var(--arcana-purple);
-  transform: translateX(-50%) translateY(-20px) scale(1.2); /* Hapus !important agar bisa di-drag */
+  transform: translateX(calc(-50% + var(--x))) translateY(-40px) rotate(0deg) scale(1.1);
 }
 
 .hand-card.active.disabled {
-  border-color: #555 !important; /* Timpa warna ungu */
-  box-shadow: none !important;   /* Hilangkan glow ungu */
-  transform: translateX(-50%) translateY(-40px) scale(1.2); /* Hapus !important */
-  filter: grayscale(1) brightness(0.8); /* Tetap gelap */
+  border-color: #555 !important;
+  box-shadow: none !important;
+  filter: grayscale(1) brightness(0.8);
+  transform: translateX(calc(-50% + var(--x))) translateY(-40px) rotate(0deg) scale(1.1);
 }
 
 .hand-card.disabled {
@@ -537,4 +541,346 @@ button:disabled {
   font-size: 12px;
   color: #666;
   margin: 0;
+}
+
+/* --- OMEN OVERLAY --- */
+#omen-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 2s ease-in-out;
+}
+
+#omen-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.omen-content {
+  text-align: center;
+  color: #fff;
+  animation: float-omen 4s ease-in-out infinite;
+}
+
+#omen-title {
+  font-family: var(--font-title);
+  font-size: 48px;
+  color: #ff3333; /* Default Omen Red */
+  text-shadow: 0 0 20px #900;
+  margin: 0;
+  letter-spacing: 4px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fade-up 1s forwards 0.5s;
+}
+
+#omen-desc {
+  font-family: var(--font-body);
+  font-size: 18px;
+  color: #ccc;
+  margin-top: 10px;
+  font-style: italic;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fade-up 1s forwards 1.0s;
+}
+
+@keyframes float-omen {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes fade-up {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- CARD VISUALS (SHARED) --- */
+/* Base Card Style override/mixin logic */
+.card-visual {
+  background: #1e1e24;
+  border: 1px solid #444; 
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+  transition: all 0.2s;
+  /* Aspect Ratio ~ Tarot */
+}
+
+/* Faction Themes */
+.card-solaris {
+  border-color: #c5a059;
+  box-shadow: 0 0 5px rgba(197, 160, 89, 0.2), inset 0 0 20px rgba(197, 160, 89, 0.1);
+  background: linear-gradient(135deg, #1a1a15 0%, #2a2510 100%);
+}
+.card-noctis {
+  border-color: #9c27b0;
+  box-shadow: 0 0 5px rgba(156, 39, 176, 0.2), inset 0 0 20px rgba(156, 39, 176, 0.1);
+  background: linear-gradient(135deg, #15101a 0%, #25102a 100%);
+}
+.card-neutral {
+  border-color: #777;
+  background: linear-gradient(135deg, #222 0%, #333 100%);
+}
+.card-taboo {
+  border-color: #ff0000;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.4), inset 0 0 30px rgba(100, 0, 0, 0.5);
+  background: linear-gradient(135deg, #1a0000 0%, #2d0000 100%);
+  animation: taboo-pulse 3s infinite;
+}
+
+@keyframes taboo-pulse {
+  0%, 100% { border-color: #800000; }
+  50% { border-color: #ff0000; }
+}
+
+/* Sigils (CSS Shapes/Icons) */
+.card-sigil {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.15;
+  pointer-events: none;
+  font-size: 30px; /* Fallback text size */
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Solaris Sun */
+.sigil-solaris::before {
+  content: "☀";
+  font-size: 40px;
+  color: #c5a059;
+}
+
+/* Noctis Moon */
+.sigil-noctis::before {
+  content: "☾";
+  font-size: 40px;
+  color: #9c27b0;
+}
+
+/* Taboo Eye */
+.sigil-taboo::before {
+  content: "👁";
+  font-size: 40px;
+  color: #ff0000;
+}
+
+/* Neutral Balance */
+.sigil-neutral::before {
+  content: "⚖";
+  font-size: 40px;
+  color: #888;
+}
+
+/* Typography override */
+.card-roman-cost {
+  position: absolute; top: 3px; left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-title);
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 2px 4px #000;
+  z-index: 2;
+}
+.card-solaris .card-roman-cost { color: #ffe0b2; }
+.card-noctis .card-roman-cost { color: #e1bee7; }
+.card-taboo .card-roman-cost { color: #ff9999; }
+
+.card-type-indicator {
+  position: absolute; top: 4px; left: 4px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 5px currentColor;
+}
+.type-unit { background-color: #4caf50; color: #4caf50; } /* Green */
+.type-spell { background-color: #2196f3; color: #2196f3; } /* Blue */
+.type-building { background-color: #ff9800; color: #ff9800; } /* Orange */
+
+/* --- DECK BUILDER --- */
+#deck-builder {
+  width: 100%; height: 100%;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  gap: 10px;
+}
+
+.db-top-bar {
+  display: flex; flex-direction: column; gap: 8px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 8px;
+}
+
+.db-header-row {
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.db-faction-title {
+  font-family: var(--font-title);
+  font-size: 20px;
+  color: var(--gold);
+}
+
+.db-controls {
+  display: flex; gap: 5px; flex-wrap: wrap;
+}
+
+.db-search {
+  flex: 1;
+  background: #222; border: 1px solid #444;
+  color: #fff; padding: 6px;
+  font-family: var(--font-body);
+  border-radius: 4px;
+}
+
+.db-filter-btn {
+  background: #333; border: 1px solid #555;
+  color: #aaa; padding: 4px 8px;
+  font-size: 10px; cursor: pointer;
+  border-radius: 4px; text-transform: uppercase;
+}
+.db-filter-btn.active {
+  background: var(--gold-dim);
+  color: #fff; border-color: var(--gold);
+}
+
+.db-content-area {
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  overflow: hidden;
+}
+
+/* Available Cards Grid */
+.db-grid-container {
+  flex: 2;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+.db-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 8px;
+}
+
+/* Selected Deck Sidebar */
+.db-deck-sidebar {
+  flex: 1;
+  background: rgba(0,0,0,0.3);
+  border-left: 1px solid #333;
+  padding-left: 10px;
+  display: flex; flex-direction: column;
+  min-width: 100px;
+}
+
+.db-deck-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+.db-deck-item {
+  font-size: 10px;
+  padding: 4px;
+  background: #222;
+  border-left: 2px solid #555;
+  cursor: pointer;
+  display: flex; justify-content: space-between;
+}
+.db-deck-item:hover { background: #333; }
+.db-deck-item.item-solaris { border-left-color: var(--gold); }
+.db-deck-item.item-noctis { border-left-color: var(--arcana-purple); }
+.db-deck-item.item-taboo { border-left-color: #ff0000; }
+
+.db-footer {
+  border-top: 1px solid #333;
+  padding-top: 10px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.db-card-new {
+  /* Inherit shared visual */
+  width: 100%; aspect-ratio: 2/3;
+  cursor: pointer;
+}
+.db-card-new:hover {
+  transform: scale(1.05);
+  z-index: 10;
+  border-color: #fff;
+}
+.db-card-new.dimmed {
+  opacity: 0.3; filter: grayscale(1);
+}
+
+/* Card Detail Overlay */
+#card-detail-overlay {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.85);
+  z-index: 4000;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(5px);
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+#card-detail-overlay.visible { opacity: 1; pointer-events: auto; }
+
+.detail-card-view {
+  width: 280px;
+  background: #15151a;
+  border: 2px solid var(--gold);
+  border-radius: 8px;
+  padding: 20px;
+  position: relative;
+  box-shadow: 0 0 50px rgba(0,0,0,0.8);
+  display: flex; flex-direction: column; gap: 15px;
+}
+
+.detail-header {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #444;
+  padding-bottom: 10px;
+}
+.detail-title { font-family: var(--font-title); font-size: 20px; color: var(--gold); }
+.detail-cost { font-size: 24px; font-weight: bold; color: var(--arcana-glow); }
+
+.detail-type { 
+  font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #888; 
+  display: flex; gap: 10px;
+}
+
+.detail-stats {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px;
+}
+
+.detail-desc {
+  font-size: 14px; color: #ccc; line-height: 1.4; font-style: italic;
+}
+
+.btn-close-detail {
+  position: absolute; top: 10px; right: 10px;
+  background: none; border: none; color: #666; font-size: 20px; cursor: pointer;
+}
+
+/* Override .hand-card to use new logic if classes added */
+.hand-card.card-visual {
+  width: 80px; height: 120px;
+  position: absolute; /* [FIX] Force absolute to maintain fan layout override .card-visual relative */
+}
+
+@media (max-width: 480px) {
+  .hand-card.card-visual { width: 65px; height: 100px; }
+  .db-grid-container { padding-right: 0; }
+  .db-deck-sidebar { min-width: 80px; }
 }

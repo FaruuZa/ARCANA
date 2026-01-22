@@ -31,14 +31,40 @@ function startBattle(gameState) {
     console.log("Starting Battle!");
     gameState.phase = 'battle';
     gameState.prepEndTime = null; 
+    
+    // Drop the Curtain event
+    io.emit("curtain_drop");
 
     // [NEW] Roll Omen
     const omen = rollOmen(gameState);
+    
+    // [NEW] Omen Announcement & Delay
+    // We want to show Omen BEFORE actual combat starts? 
+    // "curtain menurun -> muncul announcement -> game mulai"
+    // So maybe we shouldn't set phase='battle' immediately for logic ticks?
+    // But 'battle' phase enables gameLoop.
+    // Let's keep it simple: Game starts, updates run, but we show overlay.
+    // Or we can add a brief 'cinematic' phase?
+    // Request: "setelah beberapa saat announcement hilang -> game selesai" (No, game continues)
+    // "muncul announcement... agar terasa mencekam... setelah beberapa saat hilang"
+    
     if (omen) {
         console.log(`[OMEN] Effect Triggered: ${omen.name}`);
-        io.emit("toast", { msg: `OMEN: ${omen.name} - ${omen.description}`, type: "warning" });
+        // Emit specialized event for Overlay
+        io.emit("omen_announcement", { 
+            name: omen.name, 
+            description: omen.description,
+            type: "major" // for styling
+        });
     } else {
         console.log("[OMEN] No effect this battle.");
+        // Optional: Emit distinct "No Omen" or just silence?
+        // Maybe "The Veil is Silent"
+        io.emit("omen_announcement", {
+            name: "The Void",
+            description: "No Omen appears this night.",
+            type: "minor"
+        });
     }
 
     // Initialize Hands for everyone
@@ -56,9 +82,6 @@ function startBattle(gameState) {
             const randomCardId = player.deck[Math.floor(Math.random() * player.deck.length)];
             player.hand.push(randomCardId);
         }
-        // Next Card (Just visual preview of 'next possible'? Or just another random?)
-        // In this system, "Next" might just be "Random Choice". 
-        // For visual consistency, let's pick one.
         player.next = player.deck[Math.floor(Math.random() * player.deck.length)];
     });
 
@@ -192,7 +215,7 @@ io.on("connection", (socket) => {
   socket.on("submit_deck", (cardIds) => {
       console.log(`Player ${assignedTeam} submitting deck:`, cardIds);
       if (assignedTeam === -1) return;
-      if (gameState.phase !== 'preparation') return;
+      if (gameState.phase !== 'preparation' && gameState.phase !== 'deck_building') return;
 
       const player = gameState.players[assignedTeam];
       if (player.ready) return; // Already ready
@@ -282,8 +305,10 @@ io.on("connection", (socket) => {
         gameState.pauseEndTime = null;
 
         if (Math.random() > 0.5) {
-            gameState.players[0].faction = 'noctis';
-            gameState.players[1].faction = 'solaris';
+             // Optional: Force swap? 
+             // createGameState is random, so 50% chance to be same or swap.
+             // If we want FORCE SWAP, we need to inspect the new state.
+             // But 'random' is fine for now as per "random faction" rule.
         }
         rematchVotes.clear();
     }

@@ -63,10 +63,20 @@ export function syncUnits(units, layer) {
     // 3. Texture referensi kita di generator.js radiusnya 20 (diameter 40)
     const textureRefSize = 40; 
     
-    // 4. Set Scale
+    // 4. Set Scale 
+    // [FIX REQUEST] Unit tampak terlalu kecil -> KITA BESARKAN 25-30%
+    const SCALE_MULTIPLIER = 1.3; 
+    
     const bodySprite = container.getChildByName("bodySprite");
     if (bodySprite) {
-        bodySprite.scale.set(targetPixelSize / textureRefSize);
+        bodySprite.scale.set((targetPixelSize / textureRefSize) * SCALE_MULTIPLIER);
+    }
+    
+    // FLICKER GUARD (NaN CHECK)
+    // Kadang interpolasi atau lag spike bikin coordinate NaN
+    if (!isNaN(pos.x) && !isNaN(pos.y)) {
+        container.x = pos.x;
+        container.y = pos.y;
     }
     
     // Z-Index
@@ -113,6 +123,11 @@ function updateAttackAnimation(container, unit, animState) {
   }
 
   // ANIMATION LOGIC
+  const baseScale = bodySprite.scale.x; // Utilize current scale from main update (simplified)
+  // Note: baseScale logic in syncUnits dominates, but we apply pulse on top.
+  // Ideally, store base scale factor separately. 
+  // For now we will just use 1.0 relative pulse on the sprite.
+  
   if (animState.isAttacking) {
     const timeSinceStart = _animationTime - animState.attackStartTime;
     const ATTACK_DURATION = 0.25; // 250ms attack animation
@@ -122,32 +137,23 @@ function updateAttackAnimation(container, unit, animState) {
       const progress = timeSinceStart / ATTACK_DURATION; // 0 to 1
       
       // SCALE PULSE: 1.0 -> 1.15 -> 1.0
-      const scaleFactor = 1.0 + Math.sin(progress * Math.PI) * 0.15;
+      const pulse = 1.0 + Math.sin(progress * Math.PI) * 0.15;
       
-      // Apply scale
-      const baseScale = (_grid.cellSize * 0.8) / 40;
-      bodySprite.scale.set(baseScale * scaleFactor);
+      // Apply scale (Assume uniform scaling)
+      bodySprite.scale.set(bodySprite.scale.x * pulse); // Recursive relative fix handled by next frame reset
 
       // OPTIONAL: Sedikit wobble/shake
       const wobble = Math.sin(progress * Math.PI * 3) * 2; // Small shake
-      container.x = unitToScreen({ x: unit.x, y: unit.y }, _grid).x + wobble;
-    } else {
-      // Reset ke normal scale
-      const baseScale = (_grid.cellSize * 0.8) / 40;
-      bodySprite.scale.set(baseScale);
-      
-      // Reset position
-      const pos = unitToScreen(unit, _grid);
-      container.x = pos.x;
+      // Only apply wobble if position is valid
+      if (!isNaN(container.x)) {
+          // Note: accessing grid util again is expensive, better to offset container.x directly
+          // We already set container.x in main loop. Just add offset here?
+          // No, main loop overrides.
+          // Correct approach: Modifier on container.x
+          // Since main loop runs before this function (called inside syncUnits), we can mod x directly.
+          container.x += wobble;
+      }
     }
-  } else {
-    // Normal state: reset scale
-    const baseScale = (_grid.cellSize * 0.8) / 40;
-    bodySprite.scale.set(baseScale);
-    
-    // Reset position
-    const pos = unitToScreen(unit, _grid);
-    container.x = pos.x;
   }
 }
 
@@ -167,44 +173,97 @@ function createUnitVisual(unit) {
   sprite.anchor.set(0.5); 
   
   // Scale agar pas dengan grid
-  const scale = (_grid.cellSize * 0.8) / 40; // 40 adalah diameter referensi (r=20)
+  const scale = (_grid.cellSize * 0.8) / 40; // Default fallback
   sprite.scale.set(scale);
 
   container.addChild(sprite);
 
-  // 4. HP Bar (Sama)
+  // 4. HP Bar Background
   const barBg = new PIXI.Graphics();
+  barBg.name = "hpBarBg";
+  // [FIX] Align BG and Fill correctly
   barBg.beginFill(0x000000);
-  barBg.drawRect(-15, -30, 30, 6);
+  barBg.drawRect(-15, -35, 30, 6); // Raised slightly higher
   barBg.endFill();
   container.addChild(barBg);
 
+  // HP Bar Fill
   const barFill = new PIXI.Graphics();
   barFill.name = "hpBar";
   container.addChild(barFill);
+  
+  // Shield Bar (Overheal)
+  const shieldFill = new PIXI.Graphics();
+  shieldFill.name = "shieldBar"; // For overheal
+  container.addChild(shieldFill);
 
   return container;
 }
 
 function updateHealthBar(container, unit) {
   const barFill = container.getChildByName("hpBar");
-  if (!barFill) return;
-
-  const pct = Math.max(0, unit.hp / unit.maxHp);
+  const shieldFill = container.getChildByName("shieldBar");
+  const barBg = container.getChildByName("hpBarBg");
   
+  if (!barFill || !shieldFill) return;
+
+  const maxHp = unit.maxHp || 1;
+  const currentHp = unit.hp;
+  
+  // Normal HP Percentage (max 1.0)
+  let hpPct = Math.min(1.0, Math.max(0, currentHp / maxHp));
+  
+  // Shield Percentage (Overheal amount relative to Max HP)
+  let shieldPct = 0;
+  if (currentHp > maxHp) {
+      shieldPct = Math.min(1.0, (currentHp - maxHp) / maxHp); // Cap shield display at +100% maxHP for safety
+  }
+
   barFill.clear();
+  shieldFill.clear();
 
   // Warna: Hijau (>50%) -> Kuning -> Merah (<25%)
   let color = 0x00FF00;
-  if (pct < 0.5) color = 0xFFFF00;
-  if (pct < 0.25) color = 0xFF0000;
+  if (hpPct < 0.5) color = 0xFFFF00;
+  if (hpPct < 0.25) color = 0xFF0000;
+  
+  const BAR_W = 28; // width inside padding
+  const BAR_X = -14;
+  const BAR_Y = -34; // inside bg rect
+  const BAR_H = 4;
 
+  // Draw Normal HP
   barFill.beginFill(color);
-  barFill.drawRect(-14, -24, 28 * pct, 4); // Lebar 28px (dikurangi padding 1px)
+  barFill.drawRect(BAR_X, BAR_Y, BAR_W * hpPct, BAR_H);
   barFill.endFill();
   
-  // Sembunyikan bar jika HP penuh (biar bersih)
-  // Kecuali jika sedang diserang (opsional, tapi simple-nya hide kalau full)
-  container.children[1].visible = pct < 1.0; // Bg
-  barFill.visible = pct < 1.0; // Fill
+  // Draw Shield (White) - Overlays on top or extends? 
+  // Request: "overheal menjadi shield (health warna putih)"
+  // Interpretation: The portion exceeding max hp is white. 
+  // If we just draw white over full bar, it implies shield.
+  if (shieldPct > 0) {
+      shieldFill.beginFill(0xFFFFFF);
+      // Draw shield starting from where HP ends (which is full width)
+      // BUT if the bar is fixed width, we can't extend it easily without looking weird backing.
+      // Alternative: Draw white bar ON TOP of green bar to represent the 'extra' layer strength
+      // OR: Re-paint the whole bar white if fully overhealed?
+      // "hp melebihi maks hp menjadi shield"
+      // Let's implement: The 'excess' is a white bar that replaces the health bar from left to right 
+      // OR extends? Standard games often add a white overlay or extend the bar.
+      // Since our bar background is fixed, let's overlay the white bar on the green bar
+      // to show "Armored/Shielded" status, or make it a separate segment?
+      // Let's try: Overheal replaces the green bar with white bar proportional to overheal amount?
+      // No, that's confusing.
+      // Simple approach: The surplus HP is drawn as a white bar starting from 0 (like a second layer)
+      // representing "Shield Health".
+      shieldFill.drawRect(BAR_X, BAR_Y, BAR_W * shieldPct, BAR_H);
+      shieldFill.endFill();
+  }
+  
+  // Visibility Logic
+  const show = currentHp < maxHp || currentHp > maxHp; // Show if damaged OR overhealed
+  
+  if (barBg) barBg.visible = show;
+  barFill.visible = show;
+  shieldFill.visible = shieldPct > 0;
 }

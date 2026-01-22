@@ -126,7 +126,11 @@ function updateGhostVisuals() {
 
     // 5. Update Texture (Procedural) - HANYA untuk VESSEL
     if (cardData.type === 'VESSEL') {
-        const factionName = myTeamId === 0 ? 'solaris' : 'noctis';
+        const myTeamId = gameState.getMyTeam();
+        let factionName = 'solaris';
+        if (gameState.players && gameState.players[myTeamId]) {
+            factionName = gameState.players[myTeamId].faction || (myTeamId === 0 ? 'solaris' : 'noctis');
+        }
         const texture = getUnitTexture(_app, selection.cardId, factionName);
         if (texture) {
             ghostSprite.texture = texture;

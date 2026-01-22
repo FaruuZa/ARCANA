@@ -103,7 +103,7 @@ export function playUnitCard(gameState, teamId, cardId, col, row) {
     return true;
 }
 
-export function playSpellCard(gameState, socketId, teamId, cardId, col, row) {
+export function playSpellCard(gameState, socketId, teamId, cardId, col, row, targetId) { // [NEW] Added targetId param
     const playerState = gameState.players[teamId];
     const cardInfo = CARDS[cardId];
     
@@ -112,11 +112,23 @@ export function playSpellCard(gameState, socketId, teamId, cardId, col, row) {
     // Logic Ritual (Spell) biasanya valid di mana saja (Global Cast) 
     // atau cek area valid? Asumsi global/bebas.
 
+    // [FIX] Validate Single Target requirement BEFORE paying cost
+    if (cardInfo.spellData && cardInfo.spellData.type === 'single_target') {
+        if (!targetId) return false; // Fail cast if no target
+        
+        // Optional: Check if target exists/valid here too? 
+        // Or let castRitual handle it? If castRitual aborts, we already paid!
+        // So we MUST validate basic existence here to be safe.
+        const entities = [...gameState.units, ...gameState.buildings];
+        const target = entities.find(e => e.id === targetId);
+        if (!target || target.hp <= 0) return false;
+    }
+
     // Proses Cost
     if (!processCardCost(playerState, cardInfo, cardId)) return false;
 
     // Cast Logic
-    castRitual(gameState, socketId, teamId, cardId, { col, row });
+    castRitual(gameState, socketId, teamId, cardId, { col, row }, targetId); // [NEW] Pass targetId
     
     return true;
 }

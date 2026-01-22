@@ -137,6 +137,22 @@ export const CARDS = {
     }
   },
 
+  // [NEW] SINGLE TARGET TEST: LIGHTNING BOLT
+  "ritual_lightning": {
+    id: "ritual_lightning",
+    name: "Lightning Bolt",
+    type: "RITUAL",
+    minFaction: "solaris",
+    cost: 4,
+    spellData: {
+        type: "single_target",
+        damage: 600,
+        targetTeam: 'enemy',
+        buffs: [{ type: 'stun', duration: 1.0 }]
+    },
+    description: "Deals massive damage to a single unit and stuns it."
+  },
+
   // CAVALRY (Neutral)
   "vessel_cavalry": {
     id: "vessel_cavalry",
@@ -278,11 +294,11 @@ export const CARDS = {
     minFaction: "solaris",
     cost: 4,
     spellData: {
-      type: "buff_area", radius: 3.0, targetTeam: 'ally',
+      type: "single_target", targetTeam: 'ally',
       buffs: [
-        { type: 'scale_mult', value: 1.5, duration: 8.0 },
-        { type: 'damage_mult', value: 1.5, duration: 8.0 },
-        { type: 'speed_mult', value: 0.8, duration: 8.0 }
+        { type: 'scale_mult', value: 2, duration: 20.0 },
+        { type: 'damage_mult', value: 2, duration: 20.0 },
+        { type: 'speed_mult', value: 0.5, duration: 20.0 }
       ]
     }
   },
@@ -310,7 +326,7 @@ export const CARDS = {
     cost: 6,
     stats: {
       hp: 2000, damage: 100, range: 1.0, speed: 2.0, radius: 0.6,
-      traits: { onDeath: { type: 'damage_aoe', radius: 2.5, damage: 1000 } }
+      traits: { onDeath: { type: 'damage_aoe', radius: 2.5, damage: 1000, delay: 2.0 } }
     }
   },
 
@@ -370,5 +386,68 @@ export const CARDS = {
       type: "zone_lingering", radius: 3.0, duration: 6.0, interval: 1.0, damage: 0, targetTeam: 'ally',
       buffs: [ { type: 'regen', value: 50, duration: 0.2 } ]
     }
+  },
+
+  // [NEW] FIREBALL (Standard AoE)
+  "ritual_fireball": {
+    id: "ritual_fireball", name: "Fireball", type: "RITUAL", minFaction: "neutral", cost: 3,
+    spellData: { type: "damage_aoe", damage: 250, radius: 1.5, delay: 0.8 },
+    description: "Deals moderate area damage."
+  },
+
+  // [NEW] FROST NOVA (AoE Stun/Freeze)
+  "ritual_frost_nova": {
+    id: "ritual_frost_nova", name: "Frost Nova", type: "RITUAL", minFaction: "neutral", cost: 4,
+    spellData: { 
+        type: "damage_aoe", damage: 50, radius: 2.5, delay: 0.2, // Fast pop
+        buffs: [{ type: 'stun', duration: 2.0 }]
+    },
+    description: "Freezes enemies in a large area."
+  },
+
+  // [NEW] METEOR (High Dmg, Long Delay)
+  "ritual_meteor": {
+    id: "ritual_meteor", name: "Meteor", type: "RITUAL", minFaction: "noctis", cost: 6,
+    spellData: { type: "damage_aoe", damage: 800, radius: 2.0, delay: 2.5 },
+    description: "Deals massive damage after a significant delay."
+  },
+
+  // [NEW] DIVINE HEAL (Single Target)
+  "ritual_heal_single": {
+    id: "ritual_heal_single", name: "Holy Light", type: "RITUAL", minFaction: "solaris", cost: 3,
+    spellData: { 
+        type: "single_target", targetTeam: 'ally', 
+        damage: -500, // Negative damage = Heal? Check spellSystem! If not, use buff regen.
+        // Assuming damage subtraction logic handles negatives as heal or need explicit heal logic?
+        // Let's use Buffs to be safe if 'damage' only does subtraction.
+        // Actually, spellSystem: target.hp -= spell.damage. So -(-500) = +500. It works!
+        buffs: [{ type: 'shield', value: 200, duration: 5.0 }]
+    },
+    description: "Heals a friendly unit for 500 HP and shields them."
+  },
+
+  // [NEW] BERSERK (Single Target Buff)
+  "ritual_berserk": {
+    id: "ritual_berserk", name: "Bloodlust", type: "RITUAL", minFaction: "noctis", cost: 3,
+    spellData: { 
+        type: "single_target", targetTeam: 'ally', 
+        buffs: [
+            { type: 'damage_mult', value: 2.0, duration: 8.0 },
+            { type: 'attack_speed_mult', value: 2.0, duration: 8.0 },
+            { type: 'speed_mult', value: 1.5, duration: 8.0 }
+        ]
+    },
+    description: "Greatly boosts a unit's combat stats."
+  },
+  // [NEW] SILENCE (Single Target Debuff)
+  "ritual_silence": {
+    id: "ritual_silence", name: "Silence", type: "RITUAL", minFaction: "noctis", cost: 3,
+    spellData: { 
+        type: "single_target", targetTeam: 'enemy', 
+        buffs: [
+            { type: 'silence', duration: 5.0 }
+        ]
+    },
+    description: "Silences a unit, preventing it from using abilities."
   }
 };

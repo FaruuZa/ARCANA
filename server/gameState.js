@@ -229,6 +229,19 @@ export function spawnUnit(state, data) {
 
     });
     
+    // [NEW] Global Silence Omen Check
+    if (state.activeOmen && state.activeOmen.id === 'global_silence') {
+        if (!unit.buffs) unit.buffs = [];
+        unit.buffs.push({
+            name: "Global Silence",
+            type: "silence",
+            value: 1,
+            duration: 9999, // Permanent/Match Duration
+            sourceId: -1,
+            tickTimer: 0
+        });
+    }
+
     state.units.push(unit);
     return unit;
 }

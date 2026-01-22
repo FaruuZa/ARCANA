@@ -1,23 +1,34 @@
 
 import { OMENS, OMEN_CHANCE } from "../../shared/data/omens.js";
 
-// Helper: Pick Random Omen
+// Helper: Pick Random Omen (Weighted)
 export function rollOmen(gameState) {
     if (Math.random() > OMEN_CHANCE) {
         gameState.activeOmen = null;
         return null;
     }
 
-    const keys = Object.keys(OMENS);
-    const randomKey = keys[Math.floor(Math.random() * keys.length)];
-    const omen = OMENS[randomKey];
+    const omenList = Object.values(OMENS);
+    const totalWeight = omenList.reduce((sum, omen) => sum + (omen.weight || 1), 0);
+    
+    let roll = Math.random() * totalWeight;
+    let selectedOmen = null;
 
-    gameState.activeOmen = omen;
+    for (const omen of omenList) {
+        const w = omen.weight || 1;
+        if (roll < w) {
+            selectedOmen = omen;
+            break;
+        }
+        roll -= w;
+    }
     
-    // Immediate Effects (One-time application if any)
-    // Most Omens are passive modifiers checked in other systems
+    // Fallback
+    if (!selectedOmen) selectedOmen = omenList[0];
+
+    gameState.activeOmen = selectedOmen;
     
-    return omen;
+    return selectedOmen;
 }
 
 // Helper: Get Multiplier for a Stat

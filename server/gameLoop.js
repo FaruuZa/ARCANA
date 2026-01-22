@@ -8,6 +8,7 @@ import { updateBuffs } from "./systems/buffSystem.js"; // [NEW]
 import { cleanupSystem } from "./systems/cleanupSystem.js";
 import { processDeaths } from "./systems/deathSystem.js"; // [FIX] Import
 import { updateSpells } from "./systems/spellSystem.js"; // [NEW]
+import { updateSpawners } from "./systems/spawnerSystem.js"; // [NEW]
 import { MAX_ARCANA, ARCANA_REGEN_PER_SEC } from "../shared/constants.js"; // [FIX] Re-add
 import { getOmenMultiplier } from "./systems/omenSystem.js"; // [NEW]
 
@@ -25,6 +26,7 @@ export function gameLoop(gameState, dt) {
   updateTargeting(gameState, dt);
   updateMovement(gameState, dt);
   updateAttacks(gameState, dt);
+  updateSpawners(gameState, dt); // [NEW]
   updateProjectiles(gameState, dt);
   
   // [FIX] Process Deaths BEFORE Cleanup

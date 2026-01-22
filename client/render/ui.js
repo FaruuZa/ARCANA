@@ -39,6 +39,8 @@ if (btnRematch) {
     // Reset Deck Builder State
     selectedCards.clear();
     isDeckSubmitted = false;
+    hasShownReveal = false; // [NEW] Reset reveal flag
+    lastRevealedFaction = null;
     
     btnRematch.disabled = true;
     btnRematch.innerText = "WAITING...";
@@ -182,10 +184,77 @@ import { toRoman } from "../../utils/common.js";
 // Deck Builder State (Already declared above)
 let dbFilter = "all"; // all, unit, spell, taboo
 let dbSearch = "";
-let currentDbFaction = "neutral"; // [NEW] Track faction for filtering
+let currentDbFaction = "neutral"; 
+
+let hasShownReveal = false; // [NEW] Flag for Faction Reveal
+let isRevealing = false;
+let lastRevealedFaction = null;
+
+function renderFactionReveal(faction) {
+    if (isRevealing || hasShownReveal) return; // Prevent double trigger
+    
+    // Only trigger if faction changed or first time
+    if (lastRevealedFaction === faction && hasShownReveal) return;
+
+    isRevealing = true;
+    lastRevealedFaction = faction;
+    
+    // Create Overlay (Or reuse existing Omen one? Better make new one for distinct style)
+    let overlay = document.getElementById("faction-reveal-overlay");
+    if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "faction-reveal-overlay";
+        document.body.appendChild(overlay);
+    }
+    
+    const isSolaris = faction === 'solaris';
+    const title = isSolaris ? "THE ORDER OF SOLARIS" : "THE CULT OF NOCTIS";
+    const subtitle = isSolaris ? "DESTINY IS ILLUMINATED" : "FATE IS BROKEN";
+    const lore = isSolaris 
+        ? "You have been chosen to uphold the light." 
+        : "You have been chosen to embrace the void.";
+    
+    const color = isSolaris ? "#FFD700" : "#9C27B0";
+    const bg = isSolaris 
+        ? "linear-gradient(45deg, #000, #332a00)" 
+        : "linear-gradient(45deg, #000, #1a0018)";
+
+    overlay.style.background = bg;
+    overlay.innerHTML = `
+        <div class="reveal-content">
+            <div class="reveal-subtitle">${subtitle}</div>
+            <div class="reveal-title" style="color:${color}; text-shadow: 0 0 20px ${color};">${title}</div>
+            <div class="reveal-lore">${lore}</div>
+        </div>
+    `;
+    
+    // Force Reflow
+    overlay.classList.remove("visible");
+    overlay.offsetHeight; 
+    overlay.classList.add("visible");
+    
+    // Hide logic
+    setTimeout(() => {
+        overlay.classList.remove("visible");
+        isRevealing = false;
+        hasShownReveal = true;
+        
+        // Trigger UI Update to show Deck Builder
+        // Note: We rely on the next game loop update or force it if needed.
+        // But since updatePanelState runs every tick, it will see hasShownReveal=true
+        // and render Deck Builder automatically.
+    }, 4000); // 4 Seconds Cinematic
+}
 
 // [NEW] Advanced Render Deck Builder
 function renderDeckBuilder(faction) {
+    // [CHECK] Don't render if we haven't shown reveal yet
+    if (!hasShownReveal && !isRevealing && !isDeckSubmitted) {
+        renderFactionReveal(faction);
+        return;
+    }
+    if (isRevealing) return; // Wait for animation
+
     let db = document.getElementById("deck-builder");
     if (db) return; // Already rendered
 

@@ -2,29 +2,95 @@ import { distance } from "../utils/math.js";
 import { dealAreaDamage, applyBuff } from "../utils/combat.js";
 import { CARDS } from "../../shared/data/cards.js";
 
-export function castRitual(gameState, playerId, teamId, cardId, targetPos) {
+export function castRitual(gameState, playerId, teamId, cardId, targetPos, targetId) { // [NEW] Added targetId
     const card = CARDS[cardId];
     if (!card || card.type !== 'RITUAL') return;
 
     const spell = card.spellData;
 
-    // --- TIPE 1: INSTANT DAMAGE AREA (Fireball, Zap) ---
-    if (spell.type === "damage_aoe") {
+    // [NEW] DELAY SYSTEM
+    if (spell.delay && spell.delay > 0) {
+        // Queue it
+        if (!gameState.delayedSpells) gameState.delayedSpells = [];
+
+        gameState.delayedSpells.push({
+            id: gameState.nextEntityId++,
+            playerId,
+            teamId,
+            card,
+            spell, // copy ref
+            targetPos: {...targetPos}, // copy val
+            targetId,
+            timer: spell.delay,
+            maxTimer: spell.delay
+        });
+        return;
+    }
+
+    triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos, targetId);
+}
+
+// [NEW] Helper to actually triggering the spell effect
+function triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos, targetId) {
+    if (spell.type === "single_target") {
+        if (!targetId) return; 
+
+        // Re-find target (it might have died during delay)
+        const entities = [...gameState.units, ...gameState.buildings];
+        const target = entities.find(e => e.id === targetId);
+
+        if (!target || target.hp <= 0) return; 
         
+        // Update Target Pos to follow unit
+        targetPos = { col: target.col, row: target.row };
+
+        let isTeamValid = false;
+        if (spell.targetTeam === 'both') isTeamValid = true;
+        else if (spell.targetTeam === 'ally') isTeamValid = (target.team === teamId);
+        else isTeamValid = (target.team !== teamId); 
+
+        if (!isTeamValid) return;
+
+        if (spell.damage) target.hp -= spell.damage;
+
+        if (spell.buffs) {
+            spell.buffs.forEach(buffConfig => {
+                applyBuff(target, {
+                    name: card.name + "_" + buffConfig.type, 
+                    type: buffConfig.type,
+                    value: buffConfig.value,
+                    duration: buffConfig.duration,
+                    sourceId: playerId
+                });
+            });
+        }
+
+        gameState.effects.push({
+            id: gameState.nextEntityId++,
+            type: "lightning_strike", 
+            col: target.col,
+            row: target.row,
+            radius: 0.5,
+            duration: 0.3,
+            time: 0.3
+        });
+    }
+
+    else if (spell.type === "damage_aoe") {
         dealAreaDamage(
             gameState,
-            targetPos,     // Origin {col, row}
+            targetPos,
             spell.radius, 
             spell.damage, 
             teamId, 
-            'both',        // Hit ground & air
-            'enemy'        // Hit musuh saja
+            'both',
+            'enemy',
+            spell.buffs // [FIX] NOW PASSING BUFFS (STUN ETC)
         );
 
-        // Visual Effect
         gameState.effects.push({
             id: gameState.nextEntityId++,
-            type: "explosion", // Pastikan ada di client renderer
+            type: "explosion",
             col: targetPos.col,
             row: targetPos.row,
             radius: spell.radius,
@@ -33,25 +99,20 @@ export function castRitual(gameState, playerId, teamId, cardId, targetPos) {
         });
     }
 
-    // --- TIPE 2: BUFF AREA (War Cry, Healing Totem) ---
     else if (spell.type === "buff_area") {
-        
         const entities = [...gameState.units, ...gameState.buildings];
         
         entities.forEach(entity => {
             if (entity.hp <= 0) return;
 
-            // Filter Target (Ally/Enemy)
             let isValid = false;
             if (spell.targetTeam === 'ally' && entity.team === teamId) isValid = true;
             if (spell.targetTeam === 'enemy' && entity.team !== teamId) isValid = true;
 
             if (!isValid) return;
 
-            // Cek Jarak dari pusat klik
+            // Simple distance check
             if (distance(targetPos, entity) <= spell.radius) {
-                
-                // Terapkan Semua Buff
                 if (spell.buffs) {
                     spell.buffs.forEach(buffConfig => {
                         applyBuff(entity, {
@@ -64,7 +125,6 @@ export function castRitual(gameState, playerId, teamId, cardId, targetPos) {
                     });
                 }
                 
-                // Visual Effect Individual (Pada Unit)
                 gameState.effects.push({
                     id: gameState.nextEntityId++,
                     type: "buff_shine", 
@@ -77,7 +137,6 @@ export function castRitual(gameState, playerId, teamId, cardId, targetPos) {
             }
         });
 
-        // Visual Effect Area (Lingkaran Tanah)
         gameState.effects.push({
             id: gameState.nextEntityId++,
             type: "shockwave",
@@ -89,7 +148,6 @@ export function castRitual(gameState, playerId, teamId, cardId, targetPos) {
         });
     }
 
-    // --- TIPE 3: LINGERING ZONE (Poison Cloud, Blizzard, Healing Ward) ---
     else if (spell.type === "zone_lingering") {
         gameState.activeSpells.push({
             id: gameState.nextEntityId++,
@@ -99,30 +157,48 @@ export function castRitual(gameState, playerId, teamId, cardId, targetPos) {
             radius: spell.radius,
             duration: spell.duration,
             interval: spell.interval || 0.5,
-            tickTimer: 0, // Tick immediately? Or wait? Let's wait 'interval' first or 0.1
-            
+            tickTimer: 0, 
             damage: spell.damage || 0,
             buffs: spell.buffs || [],
             targetTeam: spell.targetTeam || 'enemy' 
         });
 
-        // Visual Awal (Spawn Circle)
         gameState.effects.push({
             id: gameState.nextEntityId++,
             type: "circle_zone", 
             col: targetPos.col,
             row: targetPos.row,
             radius: spell.radius,
-            duration: spell.duration, // Client bisa render lingkaran selama duration
-            time: spell.duration
+            duration: spell.duration,
+            time: spell.duration,
+            damage: spell.damage // pass for visual coloring
         });
+    }
+}
+
+
+// [NEW] Update Delayed Spells
+export function updateDelayedSpells(gameState, dt) {
+    if (!gameState.delayedSpells) return;
+
+    for (let i = gameState.delayedSpells.length - 1; i >= 0; i--) {
+        const ds = gameState.delayedSpells[i];
+        ds.timer -= dt;
+
+        if (ds.timer <= 0) {
+            // Trigger!
+            triggerSpellEffect(gameState, ds.playerId, ds.teamId, ds.card, ds.spell, ds.targetPos, ds.targetId);
+            gameState.delayedSpells.splice(i, 1);
+        }
     }
 }
 
 // [Implemented] Update Lingering Spells
 export function updateSpells(gameState, dt) {
-    const activeSpells = gameState.activeSpells;
+    updateDelayedSpells(gameState, dt); // Process Delays
 
+    const activeSpells = gameState.activeSpells;
+    // ... existing lingering logic ...
     for (let i = activeSpells.length - 1; i >= 0; i--) {
         const spell = activeSpells[i];
         
@@ -133,22 +209,19 @@ export function updateSpells(gameState, dt) {
             spell.tickTimer = spell.interval; // Reset timer
 
             // LOGIC AREA EFFECT
-            // Jika ada damage, pakai dealAreaDamage (bisa sekalian apply buff hit)
-            // Jika HANYA buff (tanpa damage), manual scan.
-
             if (spell.damage > 0) {
                  dealAreaDamage(
                     gameState, 
-                    spell, // Origin {col, row}
+                    spell, 
                     spell.radius, 
                     spell.damage, 
                     spell.team, 
                     'both', 
-                    spell.targetTeam, // 'enemy' / 'ally' / 'any'
-                    spell.buffs // Pass buffs ke onHitEffects
+                    spell.targetTeam, 
+                    spell.buffs 
                 );
             } else if (spell.buffs && spell.buffs.length > 0) {
-                // Manual Scan untuk Buff Only (e.g. Healing Ward)
+                // Manual Scan
                 const entities = [...gameState.units, ...gameState.buildings];
                 for (const entity of entities) {
                     if (entity.hp <= 0) continue;
@@ -159,7 +232,6 @@ export function updateSpells(gameState, dt) {
                     if (spell.targetTeam === 'any') isValid = true;
 
                     if (isValid && distance(spell, entity) <= spell.radius) {
-                        // Apply All Buffs
                         spell.buffs.forEach(b => {
                             applyBuff(entity, { 
                                 ...b, 

@@ -7,6 +7,8 @@ export function createProjectile(data) {
     // Posisi & Gerakan
     col: data.col,
     row: data.row,
+    startCol: data.col, // [NEW] Track start pos for arc
+    startRow: data.row, // [NEW] Track start pos for arc
     speed: data.speed,
     
     // Stats Combat

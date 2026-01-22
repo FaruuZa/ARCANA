@@ -74,8 +74,37 @@ export function dealAreaDamage(gameState, origin, radius, damage, attackerTeam, 
 }
 
 // === [NEW] TRIGGER TRAIT EFFECT ===
+// === [NEW] TRIGGER TRAIT EFFECT ===
 export function triggerTraitEffect(gameState, sourceUnit, effectData) {
     if (!effectData) return;
+
+    // [NEW] CHECK SILENCE
+    // If unit has silence buff, Trait doesn't trigger
+    if (sourceUnit.buffs && sourceUnit.buffs.some(b => b.type === 'silence')) {
+        return;
+    }
+
+    // [NEW] Hijack for Delay (Giant Skeleton bomb)
+    if (effectData.delay && effectData.delay > 0) {
+        if (!gameState.delayedSpells) gameState.delayedSpells = [];
+        
+        // Construct a "Fake Spell" object that looks like what spellSystem expects
+        // We use sourceUnit as the 'card' context roughly
+        gameState.delayedSpells.push({
+            id: gameState.nextEntityId++,
+            playerId: -1, // No player source technically, or owner?
+            teamId: sourceUnit.team,
+            card: { name: "Death Effect" }, // Dummy card for visual name
+            spell: effectData, // The actual effect data becomes the 'spell' config
+            targetPos: { col: sourceUnit.col, row: sourceUnit.row },
+            targetId: null,
+            timer: effectData.delay,
+            maxTimer: effectData.delay
+        });
+        
+        // Add Pending Visual (since delayedSpells watcher in client handles it)
+        return;
+    }
 
     // 1. EFEK DAMAGE / LEDAKAN (Giant Skeleton / Fire Spirit)
     if (effectData.type === 'damage_aoe') {

@@ -166,15 +166,22 @@ io.on("connection", (socket) => {
     assignedTeam = 1;
   }
 
+  // Helper to get lore name
+  const getFactionLoreName = (id) => {
+      const p = gameState.players[id];
+      if (!p) return `Team ${id}`;
+      return p.faction === 'solaris' ? "The Order of Solaris" : "The Cult of Noctis";
+  };
+
   // Set status Connected di State
   if (assignedTeam !== -1) {
       gameState.players[assignedTeam].connected = true;
 
       handlePlayerConnect(assignedTeam);
-      io.emit("toast", { msg: `Player joined Team ${assignedTeam == 0 ? "Solaris" : "Noctis"}`, type: "success" });
+      io.emit("toast", { msg: `A new fate has bound to ${getFactionLoreName(assignedTeam)}`, type: "success" });
   } else {
       // Spectator
-      socket.emit("toast", { msg: "Room full. Spectating mode.", type: "info" });
+      socket.emit("toast", { msg: "The realm is full. You observe from the Void.", type: "info" });
   }
 
   // 2. BERITAHU CLIENT DIA SIAPA
@@ -199,9 +206,9 @@ io.on("connection", (socket) => {
               initialState: gameState
           });
 
-          io.emit("toast", { msg: `A Spectator took over Team ${teamId == 0 ? "Solaris" : "Noctis"}!`, type: "success" });
+          io.emit("toast", { msg: `A soul has reclaimed ${getFactionLoreName(teamId)}!`, type: "success" });
       } else {
-          socket.emit("toast", { msg: "Slot already taken!", type: "error" });
+          socket.emit("toast", { msg: "This fate is already taken.", type: "error" });
       }
   });
 
@@ -222,7 +229,7 @@ io.on("connection", (socket) => {
 
       // 1. Validate Deck Size
       if (!Array.isArray(cardIds) || cardIds.length !== DECK_SIZE) {
-          socket.emit("toast", { msg: `Deck must have exactly ${DECK_SIZE} cards!`, type: "error" });
+          socket.emit("toast", { msg: `Destiny requires exactly ${DECK_SIZE} cards.`, type: "error" });
           return;
       }
 
@@ -231,13 +238,13 @@ io.on("connection", (socket) => {
       for (const id of cardIds) {
           const cardData = CARDS[id];
           if (!cardData) {
-               socket.emit("toast", { msg: `Invalid card ID: ${id}`, type: "error" });
+               socket.emit("toast", { msg: `Invalid Arcanum ID: ${id}`, type: "error" });
                return;
           }
 
           // Faction Check
           if (cardData.minFaction !== 'neutral' && cardData.minFaction !== player.faction) {
-              socket.emit("toast", { msg: `Card ${cardData.name} belongs to ${cardData.minFaction}!`, type: "error" });
+              socket.emit("toast", { msg: `The ${cardData.name} refuses your call (${cardData.minFaction} only).`, type: "error" });
               return;
           }
 
@@ -248,14 +255,14 @@ io.on("connection", (socket) => {
       }
 
       if (tabooCount > MAX_TABOO_CARDS) {
-          socket.emit("toast", { msg: `Max ${MAX_TABOO_CARDS} Taboo card allowed!`, type: "error" });
+          socket.emit("toast", { msg: `The veil cannot sustain more than ${MAX_TABOO_CARDS} Taboo card!`, type: "error" });
           return;
       }
 
       // 3. Save Deck
       player.deck = cardIds;
       player.ready = true;
-      socket.emit("toast", { msg: "Deck Validated! Waiting for opponent...", type: "success" });
+      socket.emit("toast", { msg: "Your fate is sealed. Waiting for the adversary...", type: "success" });
 
       // 4. Check Start
       const p0 = gameState.players[0];
@@ -285,7 +292,7 @@ io.on("connection", (socket) => {
     if (assignedTeam === -1) return;
 
     // [REFACTOR] Delegate to cardSystem
-    playSpellCard(gameState, socket.id, assignedTeam, data.cardId, data.col, data.row);
+    playSpellCard(gameState, socket.id, assignedTeam, data.cardId, data.col, data.row, data.targetId); // [FIX] Added data.targetId
   });
 
   socket.on("rematch_request", () => {
@@ -311,6 +318,8 @@ io.on("connection", (socket) => {
              // But 'random' is fine for now as per "random faction" rule.
         }
         rematchVotes.clear();
+        
+        io.emit("toast", { msg: "The cycle begins anew...", type: "success" });
     }
   });
 
@@ -322,7 +331,8 @@ io.on("connection", (socket) => {
         sessions[0] = null;
         gameState.players[0].connected = false; 
         
-        io.emit("toast", { msg: "Player Solaris Disconnected! Game Paused.", type: "error" });
+        const loreName = getFactionLoreName(0);
+        io.emit("toast", { msg: `${loreName} has severed the connection! Time freezes.`, type: "error" });
         
         // [NEW] Trigger Pause Logic
         handlePlayerDisconnect(0);
@@ -335,7 +345,8 @@ io.on("connection", (socket) => {
         sessions[1] = null;
         gameState.players[1].connected = false;
 
-        io.emit("toast", { msg: "Player Noctis Disconnected! Game Paused.", type: "error" });
+        const loreName = getFactionLoreName(1);
+        io.emit("toast", { msg: `${loreName} has severed the connection! Time freezes.`, type: "error" });
 
         // [NEW] Trigger Pause Logic
         handlePlayerDisconnect(1);
@@ -348,10 +359,12 @@ io.on("connection", (socket) => {
 function handlePlayerDisconnect(teamId) {
     if (gameState.phase !== 'battle') return; // Kalau game belum mulai/sudah kelar, abaikan
 
+    const loreName = gameState.players[teamId] ? (gameState.players[teamId].faction === 'solaris' ? "Solaris" : "Noctis") : `Team ${teamId}`;
+
     // 1. Set State Paused
     gameState.paused = true;
     gameState.disconnectedTeam = teamId;
-    gameState.pauseReason = `Waiting for Player ${teamId === 0 ? "Solaris" : "Noctis"}...`;
+    gameState.pauseReason = `Waiting for ${loreName} to reconnect...`;
     gameState.pauseEndTime = Date.now() + PAUSE_DURATION_MS;
 
     // 2. Bersihkan timer lama jika ada (double safety)
@@ -373,7 +386,7 @@ function handlePlayerDisconnect(teamId) {
             gameState.winner = (teamId === 0) ? 1 : 0;
             
             io.emit("toast", { 
-                msg: `Player ${teamId === 0 ? "Solaris" : "Noctis"} timed out! Opponent wins!`, 
+                msg: `${loreName} has abandoned the timeline. Opponent wins by default.`, 
                 type: "info" 
             });
         }
@@ -397,7 +410,7 @@ function handlePlayerConnect(teamId) {
             gameState.pauseReason = null;
             gameState.disconnectedTeam = -1;
             
-            io.emit("toast", { msg: "Game Resumed!", type: "success" });
+            io.emit("toast", { msg: "The timelines converge once more. Battle Resumed!", type: "success" });
         }
     }
 }

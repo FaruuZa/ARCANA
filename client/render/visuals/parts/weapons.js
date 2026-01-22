@@ -128,5 +128,126 @@ export const WEAPONS = {
     g.lineStyle(2, 0x8B008B, 0.8);
     g.arc(0, -r * 0.6, r * 0.35, 0, Math.PI, false);
     g.lineStyle(0);
+  },
+
+  // === NEW PORTS ===
+  spear: (g, r, color) => {
+    g.beginFill(0x5d4037);
+    g.drawRect(-1, -r*0.5, 2, r*2);
+    g.endFill();
+    g.beginFill(0x90a4ae);
+    g.drawPolygon([0, -r*1.2, 3, -r*0.5, -3, -r*0.5]);
+    g.endFill();
+  },
+
+  lance: (g, r, color) => {
+    g.beginFill(0xffb74d);
+    g.drawPolygon([0, -r*1.5, 4, 0, -4, 0]);
+    g.endFill();
+    g.beginFill(0x5d4037);
+    g.drawRect(-r*0.1, 0, r*0.2, r*0.5);
+    g.endFill();
+  },
+
+  axe_double: (g, r, color) => {
+    g.beginFill(0x5d4037);
+    g.drawRect(-r*0.1, -r*1.2, r*0.2, r*1.5);
+    g.endFill();
+    g.beginFill(0xcfd8dc);
+    g.drawPolygon([0, -r*1.2, r, -r, 0, -r*0.8]);
+    g.drawPolygon([0, -r*1.2, -r, -r, 0, -r*0.8]);
+    g.endFill();
+  },
+
+  mace: (g, r, color) => {
+    g.beginFill(0x5d4037);
+    g.drawRect(-r*0.1, -r, r*0.2, r);
+    g.endFill();
+    g.beginFill(0x212121);
+    g.drawCircle(0, -r, r*0.4);
+    g.endFill();
+  },
+
+  musket: (g, r, color) => {
+    g.beginFill(0x5d4037);
+    g.drawRect(-2, -r*1.5, 4, r*2);
+    g.endFill();
+    g.beginFill(0x333333);
+    g.drawRect(-3, -r*1.5, 6, r*0.5);
+    g.endFill();
+  },
+
+  rifle_long: (g, r, color) => {
+    g.beginFill(0x3e2723);
+    g.drawRect(-2, -r*2, 4, r*2.5);
+    g.endFill();
+    g.beginFill(0x1b5e20);
+    g.drawRect(-3, -r*1.5, 6, r*0.8);
+    g.endFill();
+  },
+
+  magic_fire: (g, r, color) => {
+    g.beginFill(0xff5722);
+    g.drawCircle(0, -r*0.5, r*0.4);
+    g.endFill();
+  },
+
+  magic_ice: (g, r, color) => {
+    g.beginFill(0x29b6f6);
+    g.drawCircle(0, -r*0.5, r*0.4);
+    g.endFill();
+  },
+
+  magic_zap: (g, r, color) => {
+    g.beginFill(0xffeb3b);
+    g.drawPolygon([0, -r, -5, -r*0.5, 5, -r*0.5]);
+    g.endFill();
+  },
+
+  bomb_carry: (g, r, color) => {
+    g.beginFill(0x212121);
+    g.drawCircle(0, 0, r*0.7);
+    g.endFill();
+    g.beginFill(0xffeb3b);
+    g.drawCircle(r*0.2, -r*0.2, r*0.1);
+    g.endFill();
+  },
+
+  bomb_drop: (g, r, color) => {
+    g.beginFill(0x3e2723);
+    g.drawCircle(0, r*0.5, r*0.5);
+    g.endFill();
+  },
+
+  shield_tower: (g, r, color) => {
+    g.beginFill(0x546e7a);
+    g.drawRect(-r*0.4, -r*1.5, r*0.8, r*3.0);
+    g.endFill();
+    g.beginFill(color);
+    g.drawRect(-r*0.3, -r*1.3, r*0.6, r*2.6);
+    g.endFill();
+  },
+
+  shield_round_viking: (g, r, color) => {
+    g.beginFill(0x8d6e63);
+    g.drawCircle(0, 0, r*1.0);
+    g.endFill();
+    g.lineStyle(3, 0x78909c);
+    g.drawCircle(0, 0, r*1.0);
+    g.lineStyle(0);
+    g.beginFill(0x78909c);
+    g.drawCircle(0, 0, r*0.3);
+    g.endFill();
+  },
+
+  trident_sea: (g, r, color) => {
+    g.beginFill(0xffd54f);
+    g.drawRect(-2, -r*1.0, 4, r*2.5);
+    g.endFill();
+    g.beginFill(0xffd54f);
+    g.drawPolygon([-r*0.5, -r*1.5, -r*0.5, -r*1.0, -2, -r*1.0]);
+    g.drawPolygon([r*0.5, -r*1.5, r*0.5, -r*1.0, 2, -r*1.0]);
+    g.drawPolygon([-2, -r*2.0, 2, -r*2.0, 0, -r*1.0]);
+    g.endFill();
   }
 };

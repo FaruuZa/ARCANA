@@ -40,6 +40,10 @@ export function updateBuffs(gameState, dt) {
         entity.speed = baseSpeed;
         entity.damage = baseDmg;
         entity.attackSpeed = baseAtkSpd;
+        
+        // [FIX] Reset Range & AOE properties to prevent exponential growth
+        if (entity.baseRange !== undefined) entity.range = entity.baseRange;
+        if (entity.baseAoeRadius !== undefined) entity.aoeRadius = entity.baseAoeRadius;
 
         // LOOP BUFFS
         for (let i = entity.buffs.length - 1; i >= 0; i--) {

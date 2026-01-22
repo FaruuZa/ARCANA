@@ -12,6 +12,7 @@ export function createBuilding(data) {
     row: data.row,
     
     // Stats Combat
+    // Stats Combat
     hp: data.hp,
     maxHp: data.hp,
     damage: data.damage ?? 15,
@@ -19,12 +20,19 @@ export function createBuilding(data) {
     attackSpeed: data.attackSpeed ?? 1.2,
     radius: data.radius ?? 1.0,
 
+    // [FIX] Base Stats for Buff System
+    baseDamage: data.damage ?? 15,
+    baseRange: data.range ?? 5.0,
+    baseAttackSpeed: data.attackSpeed ?? 1.2,
+    baseRadius: data.radius ?? 1.0,
+
     
     entityType: 'building',
     
     // State
     attackCooldown: 0,
     targetId: null,
-    isDead: false
+    isDead: false,
+    traits: data.traits || {}
   };
 }

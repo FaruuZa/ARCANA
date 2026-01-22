@@ -58,7 +58,24 @@ export function initInput(app) {
 
     if (isValid) {
         if (cardData.type === "RITUAL") {
-            socket.emit("cast_ritual", { col: serverCol, row: serverRow, cardId: selection.cardId });
+            const spellType = cardData.spellData ? cardData.spellData.type : null;
+            
+            // [FIX] Jangan kirim jika butuh target tapi tidak ada target
+            if (spellType === 'single_target' && !selection.pendingTargetId) {
+                console.log("Single Target Ritual Cancelled: No Target");
+                // Reset Visual
+                clearSelection();
+                updateGhostPosition(-1, -1);
+                return;
+            }
+
+            const payload = { 
+                col: serverCol, 
+                row: serverRow, 
+                cardId: selection.cardId,
+                targetId: selection.pendingTargetId 
+            };
+            socket.emit("cast_ritual", payload);
         } else {
             socket.emit("spawn_unit", { col: serverCol, row: serverRow, cardId: selection.cardId });
         }

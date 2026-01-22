@@ -25,10 +25,10 @@ export class SpatialHash {
     // To be safe for Collision, we should insert into all overlapped cells.
     
     // Bounding Box
-    const startCol = Math.floor((entity.col - entity.radius) / this.cellSize);
-    const endCol   = Math.floor((entity.col + entity.radius) / this.cellSize);
-    const startRow = Math.floor((entity.row - entity.radius) / this.cellSize);
-    const endRow   = Math.floor((entity.row + entity.radius) / this.cellSize);
+    const startCol = Math.max(-5, Math.floor((entity.col - entity.radius) / this.cellSize));
+    const endCol   = Math.min(50, Math.floor((entity.col + entity.radius) / this.cellSize));
+    const startRow = Math.max(-5, Math.floor((entity.row - entity.radius) / this.cellSize));
+    const endRow   = Math.min(50, Math.floor((entity.row + entity.radius) / this.cellSize));
 
     for (let c = startCol; c <= endCol; c++) {
       for (let r = startRow; r <= endRow; r++) {
@@ -43,10 +43,10 @@ export class SpatialHash {
 
   // Get potential candidates
   query(x, y, radius) {
-    const startCol = Math.floor((x - radius) / this.cellSize);
-    const endCol   = Math.floor((x + radius) / this.cellSize);
-    const startRow = Math.floor((y - radius) / this.cellSize);
-    const endRow   = Math.floor((y + radius) / this.cellSize);
+    const startCol = Math.max(-5, Math.floor((x - radius) / this.cellSize));
+    const endCol   = Math.min(50, Math.floor((x + radius) / this.cellSize));
+    const startRow = Math.max(-5, Math.floor((y - radius) / this.cellSize));
+    const endRow   = Math.min(50, Math.floor((y + radius) / this.cellSize));
 
     const candidates = new Set(); // Use Set to avoid duplicates
 

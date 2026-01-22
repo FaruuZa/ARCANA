@@ -2,6 +2,7 @@ import { CARDS } from "../../shared/data/cards.js";
 import { selection, selectCard, clearSelection } from "../state/selection.js";
 import { gameState, myTeamId } from "../state/gameState.js";
 import { updateGhostPosition } from "./ghost.js";
+import { setUnitOutline, getUnitScreenPosition } from "./units.js";
 import { toRoman } from "../../utils/common.js";
 
 const elHand = document.getElementById("hand-cards");
@@ -158,36 +159,34 @@ export function updateHand(state) {
   refreshCardClasses(hand, myPlayer.arcana);
 }
 
-function setupCardInteractions(cardEl, cardId, index, cardData) {
+function setupCardInteractions(cardEl, cardId, initialIndex, cardData) {
   cardEl.onpointerdown = (e) => {
     e.stopPropagation(); 
+    
+    // [FIX] Always get fresh index from DOM because hand array shifts
+    const currentIndex = parseInt(cardEl.dataset.index);
 
     // [PENTING] Set pointer capture agar tidak kehilangan fokus saat gerak cepat
     try {
         cardEl.setPointerCapture(e.pointerId);
     } catch (err) {}
 
-    const isAlreadySelected = (selection.index == index);
+    const isAlreadySelected = (selection.index == currentIndex);
     let justSelected = false;
 
     if (!isAlreadySelected) {
-        selectCard(cardId, index); 
+        selectCard(cardId, currentIndex); 
         justSelected = true;
     }
     
+    // Refresh visual active state immediately
     const currentPlayer = gameState.players[myTeamId];
     refreshCardClasses(currentPlayer ? currentPlayer.hand : [], currentPlayer ? currentPlayer.arcana : 0);
 
     const startX = e.clientX;
     const startY = e.clientY;
     
-    // Hitung offset agar kartu tidak 'teleport' ke tengah mouse saat mulai drag
-    // Kita ingin memegang kartu tepat di bagian yang kita klik
-    // GUNAKAN getBoundingClientRect untuk akurasi posisi visual saat ini
     const rect = cardEl.getBoundingClientRect();
-    
-    // Offset dari Center Kartu (ini yang ingin dipertahankan relatif terhadap mouse)
-    // Mouse Pos - Card Center Pos
     const cardCenterX = rect.left + rect.width / 2;
     const cardCenterY = rect.top + rect.height / 2;
     
@@ -195,7 +194,7 @@ function setupCardInteractions(cardEl, cardId, index, cardData) {
     const offsetY = startY - cardCenterY;
 
     let isDragging = false;
-    let rAF = null; // Variable untuk menyimpan ID animation frame
+    let rAF = null; 
 
     const elBottomPanel = document.getElementById("bottom-panel");
     const panelRect = elBottomPanel.getBoundingClientRect(); 
@@ -210,11 +209,15 @@ function setupCardInteractions(cardEl, cardId, index, cardData) {
 
     // CLEANUP FUNCTION
     const stopInteractions = () => {
-        if (rAF) cancelAnimationFrame(rAF); // Stop loop visual
+        if (rAF) cancelAnimationFrame(rAF); 
         
+        // Remove window listeners used during drag
+        window.removeEventListener("pointermove", onMove); // [FIX] Listen to window
+        window.removeEventListener("pointerup", onUp);
+        
+        // Remove panel listeners (if any left)
         elBottomPanel.removeEventListener("pointermove", onMove);
         elBottomPanel.removeEventListener("pointerleave", onLeave);
-        window.removeEventListener("pointerup", onUp);
         
         try {
             if (cardEl.hasPointerCapture(e.pointerId)) {
@@ -223,58 +226,112 @@ function setupCardInteractions(cardEl, cardId, index, cardData) {
         } catch (err) {}
     };
 
-    // 1. HANDLER KELUAR (RESET)
+    // 1. HANDLER KELUAR (RESET) - Triggered only if drag hasn't started or cancelled
     const onLeave = () => {
+        // If we are already fully dragging (listeners on window), ignore panel leave
+        if (isDragging) return; 
+
         if (isDragging) {
             cardEl.classList.remove("dragging");
-            // [FIX] Kembalikan transition agar saat balik ke tangan terlihat mulus
             cardEl.style.transition = ""; 
             cardEl.style.transform = ""; 
             cardEl.style.opacity = "1";
+            
+            gameState.units.forEach(u => setUnitOutline(u.id, null));
+            gameState.buildings.forEach(b => setUnitOutline(b.id, null));
+            selection.pendingTargetId = null; 
         }
         stopInteractions();
     };
 
     // 2. HANDLER GERAK (DRAG)
     const onMove = (moveEvent) => {
-        // [Safety Mobile] Cek keluar panel atas
-        if (moveEvent.clientY < panelTopY) {
-            onLeave();
-            return;
-        }
+        // [FIX] Removed "clientY < panelTopY" check. 
+        // We WANT to follow mouse everywhere once dragging starts.
 
         const dx = moveEvent.clientX - startX;
         const dy = moveEvent.clientY - startY;
         const dist = Math.hypot(dx, dy);
 
-        // Ambang batas drag (5px)
         if (!isDragging && dist > 5) {
             isDragging = true;
             clearTimeout(holdTimer);
             if (isInfoVisible) hideCardInfo();
             
             cardEl.classList.add("dragging");
-            
-            // [FIX UTAMA 1] Matikan CSS Transition agar ngikutin mouse 100% realtime
             cardEl.style.transition = "none"; 
+            
+            // [FIX] Switch listeners to WINDOW for continuous dragging
+            elBottomPanel.removeEventListener("pointermove", onMove);
+            elBottomPanel.removeEventListener("pointerleave", onLeave);
+            window.addEventListener("pointermove", onMove);
         }
 
         if (isDragging) {
-            // [FIX UTAMA 2] Gunakan requestAnimationFrame untuk performa visual
-            // Mencegah update DOM berlebihan yang bikin stutter
-            if (rAF) return; // Jika frame sebelumnya belum kelar render, skip logic visual ini
+            if (rAF) return; 
 
             rAF = requestAnimationFrame(() => {
-                // Hitung posisi relatif terhadap tengah layar (karena transform CSS mainnya disitu)
-                // Sesuaikan logika ini dengan CSS container Anda jika perlu
                 const xPos = moveEvent.clientX - (window.innerWidth / 2) - offsetX;
                 const yPos = moveEvent.clientY - (window.innerHeight - 100) - offsetY;
 
-                // [FIX VISUAL] Tambahkan scale sedikit biar kelihatan sedang diangkat
                 cardEl.style.transform = `translate(${xPos}px, ${yPos}px) translateX(-50%) scale(1.1)`;
-                cardEl.style.opacity = "0.9"; // Sedikit transparan biar kelihatan map di belakangnya
                 
-                rAF = null; // Reset flag agar frame berikutnya bisa jalan
+                // [FIX] Hide card when dragging on board to prevent obscuring vision
+                const isOnBoard = moveEvent.clientY < panelTopY;
+                cardEl.style.opacity = isOnBoard ? "0" : "0.9"; 
+                
+                // [NEW] SINGLE TARGET RITUAL LOGIC
+                if (cardData.type === 'RITUAL' && cardData.spellData && cardData.spellData.type === 'single_target') {
+                    // Reset
+                    gameState.units.forEach(u => setUnitOutline(u.id, null));
+                    gameState.buildings.forEach(b => setUnitOutline(b.id, null));
+                    selection.pendingTargetId = null; 
+
+                    // [FIX] Get Canvas Rect for coordinate normalization
+                    const canvas = document.querySelector("canvas");
+                    if (!canvas) return;
+                    const canvasRect = canvas.getBoundingClientRect();
+                    
+                    // Mouse relative to Canvas
+                    const mouseX = moveEvent.clientX - canvasRect.left; 
+                    const mouseY = moveEvent.clientY - canvasRect.top;
+                    
+                    let bestTarget = null;
+                    let minD = Infinity;
+                    const HIT_RADIUS = 60; 
+
+                    const candidates = [...gameState.units, ...gameState.buildings];
+                    
+                    candidates.forEach(ent => {
+                        if (ent.hp <= 0) return;
+                        
+                        const targetRule = cardData.spellData.targetTeam || 'enemy';
+                        const isAlly = ent.team === myTeamId;
+                        if (targetRule === 'enemy' && isAlly) return;
+                        if (targetRule === 'ally' && !isAlly) return;
+
+                        setUnitOutline(ent.id, 'white');
+
+                        const pos = getUnitScreenPosition(ent.id);
+                        if (!pos) return;
+                        
+                        const dx = mouseX - pos.x;
+                        const dy = mouseY - pos.y;
+                        const d = Math.sqrt(dx*dx + dy*dy);
+                        
+                        if (d < HIT_RADIUS && d < minD) {
+                            minD = d;
+                            bestTarget = ent;
+                        }
+                    });
+
+                    if (bestTarget) {
+                        setUnitOutline(bestTarget.id, 'green');
+                        selection.pendingTargetId = bestTarget.id;
+                    }
+                }
+                
+                rAF = null; 
             });
         }
     };
@@ -285,24 +342,27 @@ function setupCardInteractions(cardEl, cardId, index, cardData) {
         if (isInfoVisible) hideCardInfo();
         stopInteractions();
 
-        // Reset Visual
         cardEl.classList.remove("dragging");
-        // [FIX] Hapus override style transition & transform agar kembali diatur oleh CSS Class
         cardEl.style.transition = ""; 
         cardEl.style.transform = ""; 
         cardEl.style.opacity = "1";
+        
+        gameState.units.forEach(u => setUnitOutline(u.id, null));
+        gameState.buildings.forEach(b => setUnitOutline(b.id, null));
 
         if (isDragging) {
-            // Cek Drop Zone
             if (upEvent.clientY >= panelTopY) {
-                // Drop di dalam panel -> Cancel
+                // Drop inside panel -> Cancel
                 clearSelection();
+                selection.pendingTargetId = null; 
                 updateGhostPosition(-1, -1);
             }
         } else {
-            // Klik (Tap)
+            // Click
+            // [FIX] Use fresh index
+            const idx = parseInt(cardEl.dataset.index);
             if (!justSelected) {
-                selectCard(cardId, index);
+                selectCard(cardId, idx);
             }
         }
     };

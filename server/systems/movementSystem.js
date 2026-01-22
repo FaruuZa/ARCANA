@@ -23,6 +23,19 @@ export function updateMovement(gameState, dt) {
 
   for (const unit of units) {
     if (unit.hp <= 0) continue;
+    
+    // [FIX] CROWD CONTROL CHECK
+    // If Stunned or Rooted, skip ALL movement logic
+    if (unit.isStunned || unit.isRooted) {
+        // We still allow 'jump' to finish if mid-air? 
+        // Usually stun cancels jump, but let's keep it simple: 
+        // If jumping, we let physics continue (so they fall or land), 
+        // but if on ground, we skip "walking".
+        if (!unit.isJumping) {
+             unit.state = "idle"; // Force idle visual
+             continue;
+        }
+    }
 
     // --- 1. JUMP LOGIC (Assassin) ---
     if (unit.isJumping && unit.jumpTargetPos) {

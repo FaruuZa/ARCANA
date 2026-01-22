@@ -2,7 +2,8 @@
 
 export const selection = {
   cardId: null, // ID Kartu (misal: "vessel_01")
-  index: -1     // Posisi di tangan (0-3) untuk membedakan kartu kembar
+  index: -1,     // Posisi di tangan (0-3) untuk membedakan kartu kembar
+  pendingTargetId: null // [NEW] Target untuk Single Target Spell
 };
 
 export function selectCard(id, index) {
@@ -19,4 +20,5 @@ export function selectCard(id, index) {
 export function clearSelection() {
   selection.cardId = null;
   selection.index = -1;
+  selection.pendingTargetId = null;
 }

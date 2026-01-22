@@ -1,14 +1,13 @@
+import { BLUEPRINTS } from "./visuals/blueprints.js";
+import { updateUnitVisualEffects, initBuffIcons } from "./buff.js";
 import { gameState } from "../state/gameState.js";
-import { unitToScreen } from "../utils/grid.js";
-import { SOLARIS_THEME } from "./themes/solaris.js";
-import { NOCTIS_THEME } from "./themes/noctis.js";
 import { getUnitTexture } from "./visuals/generator.js";
-import { updateUnitVisualEffects, initBuffIcons } from "./buff.js"; // Ganti nama file sesuai yg kamu simpan
+import { unitToScreen } from "../utils/grid.js";
 
 const unitSprites = new Map();
-const unitAnimations = new Map(); // Track animasi setiap unit
+const unitAnimations = new Map(); 
 let _app, _grid;
-let _animationTime = 0; // Global animation clock
+let _animationTime = 0; 
 
 export function initUnits(app, grid) {
   _app = app;
@@ -17,13 +16,12 @@ export function initUnits(app, grid) {
   initBuffIcons(app);
 
   const layer = new PIXI.Container();
-  layer.sortableChildren = true; // Agar unit tumpuk-menumpuk dengan benar (Y-sort)
+  layer.sortableChildren = true;
   layer.zIndex = 10;
   app.stage.addChild(layer);
 
-  // Add update untuk animasi
   app.ticker.add(() => {
-    _animationTime += app.ticker.deltaMS / 1000; // Convert ke seconds
+    _animationTime += app.ticker.deltaMS / 1000;
   });
 
   return { layer };
@@ -37,7 +35,7 @@ export function syncUnits(units, layer) {
     let container = unitSprites.get(unit.id);
 
     if (!container) {
-      container = createUnitVisual(unit); // Lihat fungsi di bawah
+      container = createUnitVisual(unit); 
       unitSprites.set(unit.id, container);
       unitAnimations.set(unit.id, {
         attackCooldown: 0,
@@ -50,50 +48,43 @@ export function syncUnits(units, layer) {
 
     // Update Posisi
     const pos = unitToScreen(unit, _grid);
-    container.x = pos.x;
-    container.y = pos.y;
 
-    // [NEW] UPDATE VISUAL SCALE DARI RADIUS
-    // Rumus: (Diameter Fisik Unit dalam Pixel) / (Ukuran Texture Asli)
-    
-    // 1. Ambil radius dari server (unit.radius)
-    // 2. Konversi ke Pixel: radius * 2 (diameter) * cellSize
-    const targetPixelSize = (unit.radius * 2) * _grid.cellSize;
-    
-    // 3. Texture referensi kita di generator.js radiusnya 20 (diameter 40)
-    const textureRefSize = 40; 
-    
-    // 4. Set Scale 
-    // [FIX REQUEST] Unit tampak terlalu kecil -> KITA BESARKAN 25-30%
-    const SCALE_MULTIPLIER = 1.3; 
-    
-    const bodySprite = container.getChildByName("bodySprite");
-    if (bodySprite) {
-        bodySprite.scale.set((targetPixelSize / textureRefSize) * SCALE_MULTIPLIER);
-    }
-    
-    // FLICKER GUARD (NaN CHECK)
-    // Kadang interpolasi atau lag spike bikin coordinate NaN
+    // FLICKER GUARD
     if (!isNaN(pos.x) && !isNaN(pos.y)) {
         container.x = pos.x;
         container.y = pos.y;
     }
+
+    // [New] Base Scale Calculation from Blueprint
+    // Blueprint scale is relative to the "standard size".
+    // We combine Blueprint Scale * Grid Scale.
+    const bp = BLUEPRINTS[unit.cardId] || BLUEPRINTS['default'];
+    // Default size logic: radius * 2 * cellSize
+    const targetPixelSize = (unit.radius * 2) * _grid.cellSize;
+    const textureRefSize = 40; 
     
-    // Z-Index
+    // Final Scale = (TargetSize / RefSize) * BlueprintScale
+    const visualScale = (targetPixelSize / textureRefSize) * (bp.scale || 1.0);
+
+    const bodySprite = container.getChildByName("bodySprite");
+    if (bodySprite) {
+        // Store base scale for animation reference
+        container.baseScale = visualScale;
+        
+        // Only apply if NOT animating (Animation overrides scale)
+        // But actually, animation should be a multiplier on top of base scale.
+        // So we assume base scale here, and updateAttackAnimation applies the multiplier.
+        bodySprite.scale.set(visualScale);
+    }
+    
     container.zIndex = Math.floor(container.y);
 
-    // Update HP Bar
     updateHealthBar(container, unit);
-
-    // [NEW] UPDATE ATTACK ANIMATION
     updateAttackAnimation(container, unit, unitAnimations.get(unit.id));
-
-    // [NEW] UPDATE VISUAL BUFF/DEBUFF
-    // Ini akan mewarnai unit dan menambah ikon status di atasnya
     updateUnitVisualEffects(container, unit); 
   });
 
-  // Cleanup unit mati
+  // Cleanup
   for (const [id, container] of unitSprites) {
     if (!activeIds.has(id)) {
       container.destroy();
@@ -103,56 +94,60 @@ export function syncUnits(units, layer) {
   }
 }
 
-// [NEW] Fungsi untuk handle attack animation
 function updateAttackAnimation(container, unit, animState) {
   const bodySprite = container.getChildByName("bodySprite");
   if (!bodySprite) return;
 
-  // Cek apakah unit sedang attack (attackCooldown < 0 = sedang attack)
   const isCurrentlyAttacking = unit.attackCooldown && unit.attackCooldown < 0;
 
-  // Transition: Jika mulai attack, set waktu mulai
   if (isCurrentlyAttacking && !animState.isAttacking) {
     animState.isAttacking = true;
     animState.attackStartTime = _animationTime;
   }
 
-  // Jika selesai attack (attackCooldown > 0 atau = 0)
   if (!isCurrentlyAttacking && animState.isAttacking) {
     animState.isAttacking = false;
   }
 
-  // ANIMATION LOGIC
-  const baseScale = bodySprite.scale.x; // Utilize current scale from main update (simplified)
-  // Note: baseScale logic in syncUnits dominates, but we apply pulse on top.
-  // Ideally, store base scale factor separately. 
-  // For now we will just use 1.0 relative pulse on the sprite.
-  
+  // Handle Animation
   if (animState.isAttacking) {
     const timeSinceStart = _animationTime - animState.attackStartTime;
-    const ATTACK_DURATION = 0.25; // 250ms attack animation
+    const ATTACK_DURATION = 0.3; // Standardize visual duration
 
     if (timeSinceStart < ATTACK_DURATION) {
-      // Attack phase: scale pulse + wobble
       const progress = timeSinceStart / ATTACK_DURATION; // 0 to 1
-      
-      // SCALE PULSE: 1.0 -> 1.15 -> 1.0
-      const pulse = 1.0 + Math.sin(progress * Math.PI) * 0.15;
-      
-      // Apply scale (Assume uniform scaling)
-      bodySprite.scale.set(bodySprite.scale.x * pulse); // Recursive relative fix handled by next frame reset
+      const baseScale = container.baseScale || 1.0;
 
-      // OPTIONAL: Sedikit wobble/shake
-      const wobble = Math.sin(progress * Math.PI * 3) * 2; // Small shake
-      // Only apply wobble if position is valid
-      if (!isNaN(container.x)) {
-          // Note: accessing grid util again is expensive, better to offset container.x directly
-          // We already set container.x in main loop. Just add offset here?
-          // No, main loop overrides.
-          // Correct approach: Modifier on container.x
-          // Since main loop runs before this function (called inside syncUnits), we can mod x directly.
-          container.x += wobble;
+      // Distinguish Melee vs Ranged
+      const isRanged = ['bow', 'musket', 'rifle', 'rifle_long', 'magic_fire', 'magic_ice', 'magic_zap', 'bomb_drop'].includes(container.weaponType);
+      
+      let scaleMult = 1.0;
+      let wobble = 0;
+
+      if (isRanged) {
+        // RECOIL: Shrink quickly then recover
+        // 0.0 -> 0.2 (Shrink) -> 1.0 (Recover)
+        if (progress < 0.2) {
+             scaleMult = 1.0 - (progress * 0.5); // 1.0 -> 0.9
+        } else {
+             scaleMult = 0.9 + ((progress - 0.2) * 0.125); // Recover
+        }
+        // Shake
+        wobble = Math.sin(progress * Math.PI * 10) * 1; 
+      } else {
+        // MELEE: Lunging / Expanding
+        // Expand (Hit) at 0.5, then shrink
+        scaleMult = 1.0 + Math.sin(progress * Math.PI) * 0.2; // 1.2x at peak
+        
+        // Aggressive shake
+        wobble = Math.sin(progress * Math.PI * 2) * 3; 
       }
+
+      bodySprite.scale.set(baseScale * scaleMult);
+      container.x += wobble;
+    } else {
+       // Reset to base if animation time over but server still says attacking?
+       // Safe to let next frame reset.
     }
   }
 }
@@ -160,44 +155,94 @@ function updateAttackAnimation(container, unit, animState) {
 function createUnitVisual(unit) {
   const container = new PIXI.Container();
 
-  // 1. Tentukan Faksi (Contoh logika simple dulu)
-  // Nanti Anda bisa ambil dari gameState.players[unit.team].faction
-  const factionName = unit.team === 0 ? 'solaris' : 'noctis';
+  // 1. Tentukan Faksi dari Player Data
+  let factionName = 'neutral';
+  if (gameState.players && gameState.players[unit.team]) {
+      factionName = gameState.players[unit.team].faction || (unit.team === 0 ? 'solaris' : 'noctis');
+  } else {
+      factionName = unit.team === 0 ? 'solaris' : 'noctis'; // Fallback
+  }
 
-  // 2. Generate Texture Prosedural!
   const texture = getUnitTexture(_app, unit.cardId, factionName);
   
-  // 3. Buat Sprite
+  // Store Weapon Type for Animation
+  const bp = BLUEPRINTS[unit.cardId] || BLUEPRINTS['default'];
+  container.weaponType = bp.weapon || 'none';
+
   const sprite = new PIXI.Sprite(texture);
-  sprite.name = "bodySprite"; // Wajib untuk buff.js tinting
+  sprite.name = "bodySprite"; 
   sprite.anchor.set(0.5); 
   
-  // Scale agar pas dengan grid
-  const scale = (_grid.cellSize * 0.8) / 40; // Default fallback
-  sprite.scale.set(scale);
-
   container.addChild(sprite);
-
-  // 4. HP Bar Background
+  
+  // ... bars (same as before) ...
   const barBg = new PIXI.Graphics();
   barBg.name = "hpBarBg";
-  // [FIX] Align BG and Fill correctly
   barBg.beginFill(0x000000);
-  barBg.drawRect(-15, -35, 30, 6); // Raised slightly higher
+  barBg.drawRect(-15, -35, 30, 6);
   barBg.endFill();
   container.addChild(barBg);
 
-  // HP Bar Fill
   const barFill = new PIXI.Graphics();
   barFill.name = "hpBar";
   container.addChild(barFill);
   
-  // Shield Bar (Overheal)
   const shieldFill = new PIXI.Graphics();
-  shieldFill.name = "shieldBar"; // For overheal
+  shieldFill.name = "shieldBar";
   container.addChild(shieldFill);
 
+  // [NEW] Outline Graphics (Initially hidden)
+  const outline = new PIXI.Graphics();
+  outline.name = "outline";
+  // Insert before bodySprite (index 0) so it's behind the unit, OR after if we want overlay. 
+  // User asked for "outline", usually outside. Putting it behind is safer for "glow" effect.
+  container.addChildAt(outline, 0); 
+
   return container;
+}
+
+// === API PUBLIC UNTUK INPUT SYSTEM ===
+export function setUnitOutline(unitId, colorType) {
+    const container = unitSprites.get(unitId);
+    if (!container) return;
+    
+    const outline = container.getChildByName("outline");
+    if (!outline) return;
+    
+    outline.clear();
+    
+    if (!colorType) return; // Clear outline
+
+    const radius = 20; // Approx texture radius (40px / 2)
+    // Scale outline with unit scale
+    const scale = container.getChildByName("bodySprite").scale.x;
+    const r = radius * scale * 1.2; // Sedikit lebih besar dari body
+
+    if (colorType === 'white') {
+        // Valid Target Indicator
+        outline.lineStyle(2, 0xFFFFFF, 0.8);
+        outline.drawCircle(0, 0, r);
+    } else if (colorType === 'green') {
+        // Selected Target Indicator
+        outline.lineStyle(3, 0x00FF00, 1.0);
+        outline.drawCircle(0, 0, r);
+        
+        // Glow Effect
+        outline.beginFill(0x00FF00, 0.2);
+        outline.drawCircle(0, 0, r);
+        outline.endFill();
+    }
+}
+// Export unitSprites container getter for strict collision check if needed
+// Export unitSprites container getter for strict collision check if needed
+export function getUnitScreenPosition(unitId) {
+    const c = unitSprites.get(unitId);
+    if (!c) return null;
+    
+    // [FIX] Convert Local/Stage Coords to Screen Global Coords
+    // Because mouse events are Screen Coordinates
+    const globalPos = c.getGlobalPosition();
+    return { x: globalPos.x, y: globalPos.y };
 }
 
 function updateHealthBar(container, unit) {

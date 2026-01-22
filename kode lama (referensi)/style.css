@@ -1,0 +1,323 @@
+:root {
+  --bg-dark: #10141b;
+  --panel-bg: #222836;
+  --accent: #d000ff; /* Elixir Purple */
+  --highlight: #33b5e5;
+  --gold: #ffce00;
+  --gold-shadow: #d48f00;
+  --btn-green: #66bb6a;
+  --card-bg: #2b3242;
+  --text-main: #ffffff;
+  --font-main: 'Poppins', sans-serif;
+}
+
+/* --- 1. GLOBAL & SCROLLBAR --- */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0b0d12; }
+::-webkit-scrollbar-thumb { background: #3b4558; border-radius: 3px; }
+
+body {
+  margin: 0;
+  background: #000;
+  /* Background pattern ala arena gelap */
+  background-image: radial-gradient(circle at center, #1a202c 0%, #000 100%);
+  font-family: var(--font-main);
+  color: var(--text-main);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100dvh;
+  overflow: hidden;
+  user-select: none;
+}
+
+#main-wrapper {
+  width: 100%;
+  max-width: 450px;
+  height: 100%;
+  position: relative;
+  background: var(--bg-dark);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid #333;
+  border-right: 1px solid #333;
+}
+
+/* --- DECK BUILDER (MENU) --- */
+#deck-builder {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: #141821; z-index: 100;
+  display: flex; flex-direction: column;
+}
+
+#db-header {
+  padding: 15px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 900;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #2c3e50, #1a252f);
+  color: #fff;
+  border-bottom: 2px solid #000;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  letter-spacing: 1px;
+}
+
+#db-search-container { padding: 15px; background: #1a202c; }
+#db-search {
+  width: 100%; padding: 12px; box-sizing: border-box;
+  background: #0f131a; border: 2px solid #364152;
+  color: #fff; border-radius: 8px; font-weight: 600; font-family: inherit;
+  transition: 0.3s;
+}
+#db-search:focus { border-color: var(--highlight); box-shadow: 0 0 10px rgba(51, 181, 229, 0.2); outline: none; }
+
+#db-controls {
+  display: flex; gap: 8px; padding: 0 15px 15px;
+  justify-content: center; background: #1a202c;
+  border-bottom: 1px solid #333;
+}
+
+.filter-btn, #sort-btn {
+  padding: 8px 14px;
+  background: #364152; border: none; border-bottom: 3px solid #202630;
+  color: #ccc; border-radius: 6px; font-size: 11px; font-weight: 800;
+  cursor: pointer; transition: 0.1s; text-transform: uppercase;
+}
+.filter-btn:active, #sort-btn:active { transform: translateY(2px); border-bottom-width: 0; }
+.filter-btn.active {
+  background: var(--highlight); color: #000;
+  border-bottom-color: #00769e;
+  box-shadow: 0 0 10px rgba(51, 181, 229, 0.3);
+}
+
+#db-cards {
+  flex: 1; overflow-y: auto; padding: 15px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px; align-content: start;
+  background: radial-gradient(circle at top, #1f2736, #141821);
+}
+
+.db-card {
+  background: var(--card-bg);
+  border: 2px solid #000;
+  border-radius: 8px;
+  aspect-ratio: 3/4;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; cursor: pointer;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 4px 5px rgba(0,0,0,0.3);
+  transition: transform 0.1s;
+}
+.db-card:active { transform: scale(0.95); }
+.db-card.selected {
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 15px rgba(255, 206, 0, 0.4);
+}
+.db-card-icon { font-size: 36px; filter: drop-shadow(0 4px 2px rgba(0,0,0,0.5)); }
+.db-card-name { font-size: 10px; font-weight: 700; margin-top: 5px; color: #fff; text-shadow: 0 1px 2px #000; }
+
+/* FOOTER / DECK SLOTS */
+#db-footer {
+  background: #222836;
+  border-top: 2px solid #444;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 15px; padding-bottom: 25px;
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+  z-index: 200;
+}
+
+#db-deck-slots { display: flex; justify-content: center; gap: 6px; height: 55px; }
+.deck-slot {
+  width: 42px; height: 56px;
+  background: #151921; border: 2px dashed #444; border-radius: 6px;
+  display: flex; justify-content: center; align-items: center; font-size: 24px;
+  cursor: pointer; position: relative;
+}
+.deck-slot.filled {
+  border: 2px solid var(--highlight); background: #2b3242;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+}
+
+.diff-btn {
+  flex: 1; padding: 10px; background: #364152; border: none; border-bottom: 3px solid #202630;
+  color: #aaa; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px;
+}
+.diff-btn.active {
+  background: var(--gold); color: #000; border-bottom-color: var(--gold-shadow);
+}
+
+#start-btn {
+  background: linear-gradient(to bottom, #fdd835, #fbc02d);
+  color: #3e2723; border: none; border-bottom: 4px solid #f57f17;
+  padding: 14px 0; border-radius: 8px;
+  font-weight: 900; font-size: 18px; width: 100%;
+  cursor: pointer; opacity: 0.5; pointer-events: none;
+  text-transform: uppercase; letter-spacing: 1px;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  transition: transform 0.1s;
+}
+#start-btn.ready { opacity: 1; pointer-events: auto; }
+#start-btn.ready:active { transform: translateY(4px); border-bottom-width: 0; box-shadow: none; }
+
+/* --- GAME VIEWPORT & ARENA --- */
+#game-viewport { width: 100%; height: 100%; position: relative; display: flex; flex-direction: column; }
+
+canvas {
+  display: block; width: 100%; height: 74%;
+  /* Rumput Arena dengan Gradient */
+  background: radial-gradient(circle, #4caf50 0%, #2e7d32 80%);
+  image-rendering: pixelated;
+}
+
+/* --- HUD BOTTOM PANEL (MODERN STYLE) --- */
+#hud-layer {
+  position: absolute; bottom: 0; left: 0; width: 100%; height: 26%;
+  z-index: 50; pointer-events: none;
+}
+
+#bottom-panel {
+  background: linear-gradient(180deg, #37474f 0%, #263238 100%);
+  height: 100%; pointer-events: auto;
+  padding: 8px 12px; box-sizing: border-box;
+  border-top: 4px solid #1a2228;
+  display: flex; flex-direction: column; gap: 8px;
+  box-shadow: 0 -5px 25px rgba(0,0,0,0.7);
+}
+
+/* NEXT CARD & ELIXIR */
+#info-row { display: flex; align-items: center; gap: 12px; height: 32px; }
+
+#next-card-area {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(0,0,0,0.4); padding: 4px 10px;
+  border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);
+}
+.next-label { font-size: 9px; font-weight: 800; color: #aaa; letter-spacing: 1px; }
+
+/* ELIXIR BAR (JUICY EFFECT) */
+#elixir-area { flex: 1; position: relative; margin-right: 5px; }
+
+.elixir-bar-bg {
+  height: 22px; background: #111; border-radius: 12px; overflow: hidden;
+  border: 2px solid #555; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
+  position: relative;
+}
+
+#elixir-fill {
+  height: 100%; width: 50%;
+  background: linear-gradient(90deg, #d500f9, #aa00ff);
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.3), 0 0 10px #d500f9;
+  position: relative; transition: width 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+/* Efek garis-garis pada elixir */
+#elixir-fill::after {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
+  background-size: 20px 20px;
+  animation: flow 1s linear infinite;
+}
+@keyframes flow { 0% { background-position: 0 0; } 100% { background-position: 20px 0; } }
+
+#elixir-text {
+  position: absolute; right: 10px; top: 0; line-height: 22px;
+  font-size: 14px; font-weight: 900; color: #fff;
+  text-shadow: 0 0 4px #d500f9, 1px 1px 2px #000; z-index: 2;
+}
+
+/* HAND CARDS (3D STYLE) */
+#hand-cards { display: flex; gap: 8px; flex: 1; align-items: flex-end; padding-bottom: 5px; }
+
+.hand-card {
+  flex: 1; height: 100%;
+  background: linear-gradient(135deg, #455a64, #263238);
+  border: 2px solid #101010; border-bottom: 4px solid #101010;
+  border-radius: 8px;
+  position: relative; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+}
+.hand-card:active { transform: scale(0.95) translateY(2px); border-bottom-width: 2px; }
+
+.hand-card.active {
+  transform: translateY(-15px) scale(1.05);
+  border-color: #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+  z-index: 10;
+}
+.hand-card.disabled { filter: grayscale(1) brightness(0.5); cursor: not-allowed; transform: none; }
+
+/* Cost Bubble (Tetesan Elixir) */
+.card-cost {
+  position: absolute; top: -6px; left: -6px;
+  background: radial-gradient(circle at 30% 30%, #ea80fc, #aa00ff);
+  width: 24px; height: 24px;
+  border-radius: 50% 50% 50% 5%; /* Bentuk tetesan */
+  transform: rotate(-45deg);
+  display: flex; justify-content: center; align-items: center;
+  border: 1px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  z-index: 5;
+}
+.card-cost span { transform: rotate(45deg); font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+.card-icon { font-size: 38px; filter: drop-shadow(0 4px 3px rgba(0,0,0,0.6)); transition: 0.2s; }
+.hand-card.active .card-icon { transform: scale(1.1); }
+.card-name { font-size: 9px; margin-top: 2px; color: #ddd; font-weight: 700; text-shadow: 0 1px 2px #000; }
+
+/* UTILS (TIMER, ETC) */
+#top-ui {
+  position: absolute; top: 15px; width: 100%; padding: 0 15px;
+  display: flex; justify-content: space-between; z-index: 20; box-sizing: border-box; pointer-events: none;
+}
+#timer-box, #bot-stats {
+  background: rgba(0, 0, 0, 0.6); color: #fff;
+  padding: 6px 14px; border-radius: 20px; font-weight: 800; font-size: 16px;
+  border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(4px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+/* OVERLAYS */
+#message-overlay {
+  display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.85); z-index: 2000;
+  flex-direction: column; justify-content: center; align-items: center;
+  backdrop-filter: blur(8px);
+}
+#msg-text {
+  font-size: 48px; color: #fff; text-transform: uppercase;
+  margin-bottom: 30px;
+  text-shadow: 0 0 10px var(--highlight), 0 0 20px var(--highlight);
+  font-weight: 900; font-style: italic;
+}
+#message-overlay button {
+  padding: 15px 50px; font-size: 18px; font-weight: 900;
+  background: var(--highlight); color: #000; border: none; border-radius: 50px;
+  cursor: pointer; box-shadow: 0 0 20px rgba(51, 181, 229, 0.5);
+  transition: 0.2s; text-transform: uppercase;
+}
+#message-overlay button:hover { transform: scale(1.1); background: #fff; }
+
+#tiebreaker-msg {
+  display: none; position: absolute; top: 20%; width: 100%; text-align: center;
+  font-size: 36px; font-weight: 900; color: #ff1744;
+  text-shadow: 2px 2px 0 #fff, 0 0 15px #ff1744;
+  z-index: 100; animation: flash 1s infinite; pointer-events: none;
+  font-style: italic;
+}
+@keyframes flash { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.05); } }
+
+/* CARD INFO MODAL */
+#card-info-modal {
+  display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 85%; background: #263238; border: 2px solid #546e7a;
+  border-radius: 12px; padding: 20px; z-index: 500;
+  box-shadow: 0 0 100px rgba(0,0,0,1);
+}
+#close-info { position: absolute; right: 15px; top: 10px; color: #fff; cursor: pointer; font-size: 24px; font-weight: bold; }
+#ci-header { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #37474f; padding-bottom: 10px; }
+#ci-name { font-size: 20px; font-weight: 800; color: #fff; }
+#ci-desc { font-style: italic; font-size: 13px; color: #b0bec5; margin-bottom: 15px; line-height: 1.5; }
+.stat-row { display: flex; justify-content: space-between; padding: 10px; background: #37474f; border-radius: 6px; margin-bottom: 5px; font-size: 13px; font-weight: 600; }
+.stat-val { color: var(--gold); }

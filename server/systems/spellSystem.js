@@ -32,6 +32,24 @@ export function castRitual(gameState, playerId, teamId, cardId, targetPos, targe
 
 // [NEW] Helper to actually triggering the spell effect
 function triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos, targetId) {
+    if (spell.type === "gain_mana") {
+        const player = gameState.players[teamId];
+        if (player) {
+            player.arcana = Math.min(player.maxArcana || 10, player.arcana + spell.value);
+        }
+        
+        // Visual Effect (Coin/Mana burst)
+        gameState.effects.push({
+            id: gameState.nextEntityId++,
+            type: "buff_shine", 
+            col: targetPos.col || 9,
+            row: targetPos.row || (teamId === 0 ? 30 : 5),
+            radius: 1.0,
+            color: 0x0000FF // Blue
+        });
+        return;
+    }
+
     if (spell.type === "single_target") {
         if (!targetId) return; 
 

@@ -108,6 +108,9 @@ export function triggerTraitEffect(gameState, sourceUnit, effectData) {
 
     // 1. EFEK DAMAGE / LEDAKAN (Giant Skeleton / Fire Spirit)
     if (effectData.type === 'damage_aoe') {
+        // [FIX] Support Friendly Fire (All)
+        const targetRule = effectData.targetTeam === 'all' ? 'both' : 'enemy';
+        
         dealAreaDamage(
             gameState,
             sourceUnit, 
@@ -115,7 +118,7 @@ export function triggerTraitEffect(gameState, sourceUnit, effectData) {
             effectData.damage,
             sourceUnit.team,
             'both', 
-            'enemy', 
+            targetRule, 
             effectData.buffs 
         );
         

@@ -57,9 +57,9 @@ export const OMENS = {
         type: "buff_global", 
         target: "silence",
         value: 1,
-        weight: 20 // Rare
+        weight: 1 // Rare
     }
 };
 
 // Roll Probability
-export const OMEN_CHANCE = 1; // 50% chance to have an Omen
+export const OMEN_CHANCE = 0.7; // 70% chance to have an Omen

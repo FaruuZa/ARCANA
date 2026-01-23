@@ -123,14 +123,17 @@ export function syncProjectiles(projectiles = [], layer) {
 function createProjectileVisual(proj) {
   const container = new PIXI.Container();
   
-  let texture = PROJ_TEXTURES.get(proj.type);
+  const key = proj.type + (proj.color ? "_" + proj.color : "");
+  let texture = PROJ_TEXTURES.get(key);
+  
   if (!texture) {
       const g = new PIXI.Graphics();
       const r = 20; // Ref size
-      
+      const color = proj.color || 0xFFFF00; // Default Yellow
+
       // === VISUALS VIA WEAPONS.js REUSE ===
       if (proj.type === 'fireball') {
-           WEAPONS.magic_fire(g, r, {x:0, y:0});
+           WEAPONS.magic_fire(g, r, {x:0, y:0}); // Ignores color usually
       }
       else if (proj.type === 'cannonball') {
            g.beginFill(0x000000); g.drawCircle(0,0,5); g.endFill();
@@ -142,24 +145,39 @@ function createProjectileVisual(proj) {
            WEAPONS.magic_ice(g, r, {x:0, y:0});
       }
       else if (proj.type === 'arrow_purple') {
-           g.beginFill(0x9C27B0); g.drawPolygon([-5,-5, 5,-5, 0, 8]); g.endFill(); // Arrowhead
+           g.beginFill(0x9C27B0); g.drawPolygon([-5,-5, 5,-5, 0, 8]); g.endFill(); 
       }
-      // [NEW] Solaris Arrow (Sun Ranger)
       else if (proj.type === 'arrow_solaris') {
-           g.beginFill(0xFFFF00); // Yellow/Gold
+           g.beginFill(0xFFFF00); 
            g.drawPolygon([-4,-4, 4,-4, 0, 10]); 
            g.endFill(); 
-           // Glow
            g.lineStyle(2, 0xFF9800, 0.5);
            g.drawCircle(0, 0, 5);
       }
+      // [NEW] Generic Arrow / Spear with Custom Color
+      else if (proj.type.includes('arrow') || proj.type === 'spear') {
+           g.beginFill(color); 
+           // Simple Arrowhead shape
+           g.drawPolygon([-4,-4, 4,-4, 0, 12]); 
+           g.endFill();
+           
+           // Glow effect if custom color
+           if (proj.color) {
+               g.lineStyle(2, color, 0.5);
+               g.drawCircle(0, 0, 6);
+           }
+      }
+      // [NEW] Default / Fallback
       else {
-           // Default Arrow
-           g.beginFill(0xFFFF00); g.drawCircle(0,0,3); g.endFill();
+           g.beginFill(color); g.drawCircle(0,0,4); g.endFill();
+           if (proj.color) {
+               g.lineStyle(2, 0xFFFFFF, 0.5);
+               g.drawCircle(0,0,6);
+           }
       }
 
       texture = _app.renderer.generateTexture(g);
-      PROJ_TEXTURES.set(proj.type, texture);
+      PROJ_TEXTURES.set(key, texture);
   }
 
   const sprite = new PIXI.Sprite(texture);

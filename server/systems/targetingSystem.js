@@ -83,7 +83,8 @@ function scanForTarget(unit, allEntities, gameState) {
         return bestTarget;
 
     } else {
-        // --- Logic Attacker ---
+        // --- Logic Attacker (Enemy OR All) ---
+        // For 'all', we just want the closest valid target (friend or foe)
         let closestTarget = null;
         let minDist = unit.sightRange; 
         for (const other of candidates) {
@@ -102,9 +103,13 @@ function isValidTarget(attacker, candidate) {
     if (attacker.targetTeam === 'ally') {
         if (candidate.team !== attacker.team) return false;
         if (candidate.hp >= candidate.maxHp) return false;
-    } else {
+    } else if (attacker.targetTeam === 'enemy') {
         if (candidate.team === attacker.team) return false;
+    } else if (attacker.targetTeam === 'all') {
+        // [NEW] Taboo 'Traitor' Logic: Attacks Everyone (Except Self)
+        if (candidate.id === attacker.id) return false;
     }
+
     const candType = candidate.entityType || 'building'; 
     if (attacker.targetRule === 'building_only' && candType !== 'building') return false;
     if (attacker.targetRule === 'unit_only' && candType !== 'unit') return false;

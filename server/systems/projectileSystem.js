@@ -57,7 +57,8 @@ export function updateProjectiles(gameState, dt) {
             row: proj.row,
             radius: proj.aoeRadius,
             duration: 0.3,
-            time: 0.3
+            time: 0.3,
+            color: proj.color || proj.aoeColor // [NEW] Inherit Color
         });
 
       } else {

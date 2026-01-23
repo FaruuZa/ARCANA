@@ -159,15 +159,28 @@ function updatePanelState(state) {
       elGameOver.classList.remove("hidden");
       const isWinner = state.winner === myTeamId;
       if (elGoTitle && elGoMsg) {
-        if (isWinner) {
-          elGoTitle.innerText = "VICTORY";
-          elGoTitle.style.color = "#00FF00";
-          elGoMsg.innerText = "The enemy King has fallen!";
-        } else {
-          elGoTitle.innerText = "DEFEAT";
-          elGoTitle.style.color = "#FF0000";
-          elGoMsg.innerText = "Your King has fallen...";
-        }
+          // [LORE] Game Over Text
+          const myFaction = (state.players[myTeamId] && state.players[myTeamId].faction) || "neutral";
+          
+          if (isWinner) {
+              if (myFaction === 'solaris') {
+                  elGoTitle.innerText = "LIGHT PREVAILS";
+                  elGoTitle.style.color = "#FFD700";
+                  elGoMsg.innerText = "The Order of Solaris has secured destiny.";
+              } else if (myFaction === 'noctis') {
+                  elGoTitle.innerText = "THE VOID CONSUMES";
+                  elGoTitle.style.color = "#9C27B0";
+                  elGoMsg.innerText = "The Cult of Noctis has broken fate.";
+              } else {
+                  elGoTitle.innerText = "VICTORY";
+                  elGoTitle.style.color = "#00FF00";
+                  elGoMsg.innerText = "The enemy King has fallen!";
+              }
+          } else {
+              elGoTitle.innerText = "DEFEAT";
+              elGoTitle.style.color = "#888"; // Grey/Dead
+              elGoMsg.innerText = "Your legacy turns to dust...";
+          }
       }
       if (state.rematchCount > 0) {
         elRematchStatus.classList.remove("hidden");
@@ -423,6 +436,21 @@ function toggleCardSelection(id) {
             showToast(`Max ${DECK_SIZE} cards!`, "error");
             return;
         }
+        
+        // [NEW] Taboo Limit Check
+        const card = CARDS[id];
+        if (card.isTaboo) {
+            let tabooCount = 0;
+            selectedCards.forEach(cid => {
+                if(CARDS[cid] && CARDS[cid].isTaboo) tabooCount++;
+            });
+            
+            if (tabooCount >= 1) {
+                showToast("Limit: 1 Taboo Card per Deck!", "error");
+                return;
+            }
+        }
+        
         selectedCards.add(id);
     }
     // Refresh Grid (for dimming) and Sidebar
@@ -470,8 +498,31 @@ function showCardDetail(card) {
     const overlay = document.getElementById("card-detail-overlay");
     if(!overlay) return;
     
+    // Helper: Format Demerit
+    let demeritHtml = "";
+    if (card.isTaboo) {
+        let demeritText = "Unknown Curse";
+        if (card.demerit) {
+            if (card.demerit.type === 'arcana_mult') demeritText = `Perm. Arcana Regen x${card.demerit.value}`;
+            if (card.demerit.type === 'tower_damage_mult') demeritText = `Perm. Tower Dmg x${card.demerit.value}`;
+        }
+        demeritHtml = `<div class="detail-demerit">⚠️ TABOO: ${demeritText}</div>`;
+    }
+    
+    // Helper: Count
+    let countHtml = "";
+    if (card.stats && card.stats.count > 1) {
+        countHtml = `<div class="detail-badge">x${card.stats.count} Units</div>`;
+    }
+    
+    // Helper: Friendly Fire Warning
+    let ffHtml = "";
+    if (card.stats && card.stats.targetTeam === 'all') {
+        ffHtml = `<div class="detail-warning">⚔️ ATTACKS ALLIES</div>`;
+    }
+    
     overlay.innerHTML = `
-        <div class="detail-card-view">
+        <div class="detail-card-view ${card.isTaboo ? 'border-taboo' : ''}">
             <button class="btn-close-detail" onclick="document.getElementById('card-detail-overlay').classList.remove('visible')">×</button>
             <div class="detail-header">
                 <div class="detail-title">${card.name}</div>
@@ -482,13 +533,16 @@ function showCardDetail(card) {
                 <span>${card.type}</span>
                 <span>•</span>
                 <span>${card.minFaction.toUpperCase()}</span>
+                ${countHtml}
             </div>
             
+            ${demeritHtml}
+            ${ffHtml}
+            
             <div class="detail-stats">
-                 ${card.hp ? `<div class="stat-row"><span class="stat-label">HP</span><span>${card.hp}</span></div>` : ''}
-                 ${card.damage ? `<div class="stat-row"><span class="stat-label">ATK</span><span>${card.damage}</span></div>` : ''}
-                 ${card.range ? `<div class="stat-row"><span class="stat-label">RNG</span><span>${card.range}</span></div>` : ''}
-                 ${card.radius ? `<div class="stat-row"><span class="stat-label">RAD</span><span>${card.radius}</span></div>` : ''}
+                 ${card.stats && card.stats.hp ? `<div class="stat-row"><span class="stat-label">HP</span><span>${card.stats.hp}</span></div>` : ''}
+                 ${card.stats && card.stats.damage ? `<div class="stat-row"><span class="stat-label">ATK</span><span>${card.stats.damage}</span></div>` : ''}
+                 ${card.stats && card.stats.range ? `<div class="stat-row"><span class="stat-label">RNG</span><span>${card.stats.range}</span></div>` : ''}
             </div>
             
             <div class="detail-desc">

@@ -1,90 +1,96 @@
 export const CARDS = {
   // 1. VESSEL BIASA (Neutral)
+  // 1. NEUTRAL TANK
   "vessel_01": {
     id: "vessel_01",
-    name: "Iron Vessel",
+    name: "Iron Vanguard",
     type: "VESSEL",
-    minFaction: "neutral", // [NEW] Neutral
+    minFaction: "neutral",
     cost: 3,
     stats: {
-      hp: 150, damage: 20, range: 1.5, sightRange: 5.5, speed: 4.0, attackSpeed: 1.0,
-      deployTime: 1.0, aimTime: 0.1,
+      hp: 550, damage: 45, range: 1.5, sightRange: 5.5, speed: 3.5, attackSpeed: 1.2,
+      deployTime: 1.0, aimTime: 0.5,
       movementType: 'ground',
       targetTeam: 'enemy',
       targetRule: 'any',
-      targetHeight: 'both'
-    }
+      targetHeight: 'ground'
+    },
+    description: "A heavily armored soldier who holds the line against any tide."
   },
   
-  // 2. RANGER (Solaris)
+  // 2. SOLARIS RANGER
   "vessel_02": {
     id: "vessel_02",
     name: "Sun Ranger",
     type: "VESSEL",
-    minFaction: "solaris", // [NEW] Solaris
+    minFaction: "solaris",
     cost: 4,
     stats: {
-      hp: 60, damage: 30, range: 4.5, sightRange: 6.5, speed: 5.0, attackSpeed: 1.5,
-      deployTime: 1.0, aimTime: 0.8, count: 2, spawnRadius: 1,
+      hp: 140, damage: 45, range: 5.0, sightRange: 7.0, speed: 5.0, attackSpeed: 1.3,
+      deployTime: 1.0, aimTime: 0.6, count: 2, spawnRadius: 1,
       movementType: 'ground',
       targetTeam: 'enemy',
       targetRule: 'any',
-      targetHeight: 'both'
-    }
+      targetHeight: 'both',
+      projectileType: 'arrow_solaris'
+    },
+    description: "Elite archers who rain piercing light upon the unworthy."
   },
 
-  // 3. SIEGE RAM (Noctis)
+  // 3. NOCTIS SIEGE
   "vessel_siege": {
     id: "vessel_siege",
-    name: "Dark Ram",
+    name: "Void Ram",
     type: "VESSEL",
-    minFaction: "noctis", // [NEW] Noctis
+    minFaction: "noctis",
     cost: 5,
     stats: {
-      hp: 800, damage: 50, range: 1.0, sightRange: 7.0, speed: 3.0, attackSpeed: 1,
+      hp: 950, damage: 80, range: 1.0, sightRange: 7.0, speed: 3.0, attackSpeed: 1,
       deployTime: 2.0, aimTime: 0.5,
       movementType: 'ground',
       targetTeam: 'enemy',
       targetRule: 'building_only', 
       targetHeight: 'ground'
-    }
+    },
+    description: "A living siege engine forged from the abyss to shatter walls."
   },
 
-  // 4. HEALER (Solaris)
+  // 4. SOLARIS HEALER
   "vessel_healer": {
     id: "vessel_healer",
-    name: "Cleric",
+    name: "Lightbringer",
     type: "VESSEL",
     minFaction: "solaris",
     cost: 4,
     stats: {
-      hp: 100, 
-      damage: -70, 
-      range: 4.0, sightRange: 6.0, speed: 4.5, attackSpeed: 0.8,
-      deployTime: 1.0, aimTime: 0.5,
+      hp: 180, 
+      damage: -80, 
+      range: 4.5, sightRange: 6.5, speed: 4.0, attackSpeed: 0.8,
+      deployTime: 1.0, aimTime: 0.4,
       movementType: 'ground', 
       targetTeam: 'ally',    
       targetRule: 'unit_only',
       targetHeight: 'both'
-    }
+    },
+    description: "Channels the sun's warmth to mend the wounds of the faithful."
   },
 
-  // 5. HORDE (Noctis)
+  // 5. NOCTIS SWARM
   "vessel_swarm": {
     id: "vessel_swarm",
-    name: "Skeleton Horde",
+    name: "Hollow Legion",
     type: "VESSEL",
     minFaction: "noctis",
     cost: 3,
     stats: {
       count: 5,           
       spawnRadius: 2,   
-      hp: 40, damage: 10, range: 1, sightRange: 5.0, speed: 4.5, attackSpeed: 1.0,
+      hp: 65, damage: 15, range: 1, sightRange: 5.0, speed: 4.5, attackSpeed: 1.0,
       deployTime: 1.0, aimTime: 0.1,
       movementType: 'ground',
       targetTeam: 'enemy', targetRule: 'any', targetHeight: 'ground'
     },
-    description: "Spawns a horde of 5 weak skeletons."
+    description: "A swarm of restless souls that overwhelms enemies by sheer number."
   },
 
   // VALKYRIE (Neutral)
@@ -322,12 +328,18 @@ export const CARDS = {
     name: "Giant Skeleton",
     type: "VESSEL",
     minFaction: "neutral",
-    isTaboo: true, // [NEW] TABOO
+    isTaboo: true, // [NEW] Taboo Unit
     cost: 6,
     stats: {
       hp: 2000, damage: 100, range: 1.0, speed: 2.0, radius: 0.6,
-      traits: { onDeath: { type: 'damage_aoe', radius: 2.5, damage: 1000, delay: 2.0 } }
-    }
+      traits: { 
+          // [NEW] Friendly Fire Spawn (Fall Damage?)
+          onSpawn: { type: 'damage_aoe', radius: 2.5, damage: 150, targetTeam: 'all' },
+          // [NEW] Friendly Fire Death (Big Bomb)
+          onDeath: { type: 'damage_aoe', radius: 4.0, damage: 1000, delay: 2.0, targetTeam: 'all' } 
+      }
+    },
+    description: "Massive unit that damages EVERYONE nearby when landing and dying."
   },
 
   // 3. CONTOH ON-SPAWN: "Electro Wizard" (Masuk langsung Zap)
@@ -448,6 +460,41 @@ export const CARDS = {
             { type: 'silence', duration: 5.0 }
         ]
     },
-    description: "Silences a unit, preventing it from using abilities."
+      description: "Silences a unit, preventing it from using abilities."
+  },
+
+  // === TABOO CARDS ===
+
+  // [NEW] forbidden_pact (Ritual: Instant Mana, reduce Regen)
+  "ritual_forbidden_pact": {
+    id: "ritual_forbidden_pact",
+    name: "Forbidden Pact",
+    type: "RITUAL",
+    minFaction: "noctis",
+    isTaboo: true,
+    demerit: { type: 'arcana_mult', value: 0.8 }, 
+    cost: 0,
+    spellData: {
+        type: "gain_mana", value: 4 // Buffed to 4
+    },
+    description: "Seize power now, at the cost of your future. Instantly gain 4 Arcana, but permanently reduce regeneration."
+  },
+
+  // [NEW] traitor_knight (Unit: High Stats, Attacks ALL)
+  "vessel_traitor": {
+    id: "vessel_traitor",
+    name: "Fallen Champion",
+    type: "VESSEL",
+    minFaction: "neutral",
+    isTaboo: true,
+    cost: 4, // Increased Cost
+    stats: {
+      hp: 1100, damage: 160, range: 1.5, sightRange: 6.0, speed: 4.0, attackSpeed: 0.8,
+      deployTime: 1.0, aimTime: 0.4,
+      movementType: 'ground',
+      targetTeam: 'all', 
+      targetRule: 'any', targetHeight: 'ground'
+    },
+    description: "A once-noble hero corrupted by the void. Strikes blindly at friend and foe alike."
   }
 };

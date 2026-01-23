@@ -414,16 +414,16 @@ export function shakeCardVisual(index) {
 // === INTERNAL: POPUP INFO ===
 function showCardInfo(data) {
   const s = data.stats || {};
+  
+  // 1. Build Stats Grid
   let statsHtml = "";
-
   const list = [
     ["HP", s.hp], ["DMG", s.damage], ["SPD", s.speed],
-    ["RNG", s.range], ["COUNT", s.count],
-    ["AOE", s.aoeRadius ? s.aoeRadius + "m" : null],
+    ["RNG", s.range], ["RAD", s.radius || s.aoeRadius]
   ];
 
   list.forEach(([label, val]) => {
-    if (val) {
+    if (val !== undefined && val !== null) {
       statsHtml += `
         <div class="stat-row">
             <span class="stat-label">${label}</span>
@@ -432,11 +432,38 @@ function showCardInfo(data) {
     }
   });
 
+  // 2. Build Extra Badges (Count, Friendly Fire)
+  let extraHtml = "";
+  if (s.count && s.count > 1) {
+      extraHtml += `<div class="detail-badge" style="display:inline-block; margin-bottom:5px;">x${s.count} Units</div>`;
+  }
+  if (s.targetTeam === 'all') {
+      extraHtml += `<div class="detail-warning" style="margin-bottom:5px;">⚔️ ATTACKS ALLIES</div>`;
+  }
+
+  // 3. Taboo / Demerit
+  let tabooHtml = "";
+  if (data.isTaboo) {
+      let demeritText = "Unknown Curse";
+      if (data.demerit) {
+            if (data.demerit.type === 'arcana_mult') demeritText = `Perm. Regen x${data.demerit.value}`;
+            else if (data.demerit.type === 'tower_damage_mult') demeritText = `Perm. Tower Dmg x${data.demerit.value}`;
+      }
+      tabooHtml = `<div class="detail-demerit">⚠️ TABOO: ${demeritText}</div>`;
+  }
+
   elInfoPopup.innerHTML = `
-        <div class="info-title">${data.name}</div>
-        <div class="info-desc">${data.description || "No description."}</div>
+        <div class="info-title" style="color:${data.isTaboo ? '#ff4444' : '#c5a059'}">${data.name}</div>
+        ${extraHtml}
+        ${tabooHtml}
         <div class="info-stats">${statsHtml}</div>
+        <div class="info-desc">${data.description || "No description."}</div>
     `;
+    
+  // Add styling class if taboo
+  if (data.isTaboo) elInfoPopup.style.borderColor = "#ff0000";
+  else elInfoPopup.style.borderColor = "#c5a059";
+
   elInfoPopup.classList.add("visible");
 }
 

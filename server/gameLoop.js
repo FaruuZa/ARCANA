@@ -38,7 +38,11 @@ export function gameLoop(gameState, dt) {
       const player = gameState.players[teamId];
       
       if (player.arcana < MAX_ARCANA) {
-          player.arcana += ARCANA_REGEN_PER_SEC * regenMult * dt; // [NEW] Apply Multiplier
+          // [FIX] Apply Omen AND Taboo Modifiers
+          const tabooMult = player.modifiers ? player.modifiers.arcanaRate : 1.0;
+          const totalMult = regenMult * tabooMult;
+          
+          player.arcana += ARCANA_REGEN_PER_SEC * totalMult * dt; 
           
           // Clamp agar tidak lebih
           if (player.arcana > MAX_ARCANA) {

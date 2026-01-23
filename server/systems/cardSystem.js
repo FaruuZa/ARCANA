@@ -38,7 +38,32 @@ export function processCardCost(playerState, cardInfo, cardId) {
   // Update Next Card (Just cosmetic in this mode, pick another random)
   playerState.next = playerState.deck[Math.floor(Math.random() * playerState.deck.length)];
 
+  // [NEW] Process Taboo Demerit
+  if (cardInfo.isTaboo && cardInfo.demerit) {
+      processDemerit(playerState, cardInfo.demerit);
+  }
+
   return true; 
+}
+
+// [NEW] Helper: Taboo Demerit Logic
+function processDemerit(playerState, demerit) {
+    if (!playerState.modifiers) return;
+
+    if (demerit.type === 'arcana_mult') {
+        playerState.modifiers.arcanaRate *= demerit.value;
+        // Opsional: Clamp min rate?
+        if (playerState.modifiers.arcanaRate < 0.1) playerState.modifiers.arcanaRate = 0.1;
+    }
+    else if (demerit.type === 'tower_damage_mult') {
+        playerState.modifiers.towerDamage *= demerit.value;
+    }
+    else if (demerit.type === 'tower_hp_mult') {
+        playerState.modifiers.towerHp *= demerit.value;
+        // Note: Changing MaxHP on the fly is tricky for existing buildings, usually applies to new spawns
+        // or we iterate buildings and cut HP? 
+        // For simplicity: Just modifier, logic elsewhere handles it if needed.
+    }
 }
 
 export function playUnitCard(gameState, teamId, cardId, col, row) {

@@ -82,6 +82,15 @@ function performAttack(unit, target, gameState, dmgMult, asMult = 1.0) {
 
     // 1. Hitung Damage Dasar (Apply Omen)
     let actualDamage = unit.damage * dmgMult;
+    
+    // [NEW] Taboo Modifier: Tower Damage
+    if (unit.entityType === 'building') {
+        const player = gameState.players[unit.team];
+        if (player && player.modifiers) {
+            actualDamage *= player.modifiers.towerDamage;
+        }
+    }
+
     let isCriticalCharge = false;
 
     if (unit.isCharging && unit.traits.charge) {
@@ -93,61 +102,64 @@ function performAttack(unit, target, gameState, dmgMult, asMult = 1.0) {
 
     const onHitEffects = [];
 
-    if (unit.traits.freezeOnHit) {
-      onHitEffects.push({
-        name: "frost_slow",
-        type: "speed_mult",
-        value: 0.6,
-        duration: 2.0,
-        sourceId: unit.id
-      });
-      onHitEffects.push({
-        name: "frost_chill",
-        type: "attack_speed_mult",
-        value: 0.8,
-        duration: 2.0,
-        sourceId: unit.id
-      });
-    }
-
-    if (unit.traits.poisonOnHit) {
-      onHitEffects.push({
-        name: "poison_dot",
-        type: "poison",
-        value: 5,
-        duration: 3.0,
-        sourceId: unit.id
-      });
-    }
-
-    if (unit.traits.stunOnHit) {
-       onHitEffects.push({
-         name: "bash_stun",
-         type: "stun",
-         value: 1,
-         duration: unit.traits.stunDuration || 0.5,
-         sourceId: unit.id
-       });
-    }
-   
-    if (unit.traits.rootOnHit) {
-        onHitEffects.push({
-            name: "root_effect",
-            type: "root",
-            value: 1,
-            duration: unit.traits.rootDuration || 1.0,
+    // [FIX] Silence blocks On-Hit Effects
+    if (!unit.isSilenced) {
+        if (unit.traits.freezeOnHit) {
+          onHitEffects.push({
+            name: "frost_slow",
+            type: "speed_mult",
+            value: 0.6,
+            duration: 2.0,
             sourceId: unit.id
-        });
-    }
-
-    if (unit.traits.silenceOnHit) {
-        onHitEffects.push({
-            name: "silence_effect",
-            type: "silence",
-            value: 1,
-            duration: unit.traits.silenceDuration || 3.0,
+          });
+          onHitEffects.push({
+            name: "frost_chill",
+            type: "attack_speed_mult",
+            value: 0.8,
+            duration: 2.0,
             sourceId: unit.id
-        });
+          });
+        }
+    
+        if (unit.traits.poisonOnHit) {
+          onHitEffects.push({
+            name: "poison_dot",
+            type: "poison",
+            value: 5,
+            duration: 3.0,
+            sourceId: unit.id
+          });
+        }
+    
+        if (unit.traits.stunOnHit) {
+           onHitEffects.push({
+             name: "bash_stun",
+             type: "stun",
+             value: 1,
+             duration: unit.traits.stunDuration || 0.5,
+             sourceId: unit.id
+           });
+        }
+       
+        if (unit.traits.rootOnHit) {
+            onHitEffects.push({
+                name: "root_effect",
+                type: "root",
+                value: 1,
+                duration: unit.traits.rootDuration || 1.0,
+                sourceId: unit.id
+            });
+        }
+    
+        if (unit.traits.silenceOnHit) {
+            onHitEffects.push({
+                name: "silence_effect",
+                type: "silence",
+                value: 1,
+                duration: unit.traits.silenceDuration || 3.0,
+                sourceId: unit.id
+            });
+        }
     }
 
     if (isRanged) {
@@ -161,6 +173,7 @@ function performAttack(unit, target, gameState, dmgMult, asMult = 1.0) {
         row: unit.row,
         speed: 10.0,
         type: unit.projectileType || "arrow",
+        color: unit.projectileColor, // [NEW] Custom Color
         aoeRadius: unit.aoeRadius || 0,
         targetHeight: unit.targetHeight,
         onHitEffects: onHitEffects 
@@ -190,6 +203,7 @@ function performAttack(unit, target, gameState, dmgMult, asMult = 1.0) {
             radius: unit.aoeRadius,
             duration: 0.3,
             time: 0.3,
+            color: unit.aoeColor // [NEW] Custom Color
         });
 
       } else {

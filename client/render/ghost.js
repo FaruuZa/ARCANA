@@ -213,15 +213,15 @@ function updateGhostVisuals() {
     const safeCellSize = _grid.cellSize;
     const stats = cardData.stats || {};
 
-    // A. Range Circle - HANYA jika VESSEL dan range valid
-    if (cardData.type === 'VESSEL' && 
-        typeof stats.range === 'number' && 
-        Number.isFinite(stats.range) && 
-        stats.range > 2.0) {
-        const rangeColor = isPlacementValid ? 0xFFFFFF : 0xFF0000;
-        const rangePx = stats.range * safeCellSize;
-        safeDrawCircle(rangePx, rangeColor, 0.1, true);
-    }
+    // A. Range Circle - DISABLE VISUAL RANGE (Sesuai Request)
+    // if (cardData.type === 'VESSEL' && 
+    //     typeof stats.range === 'number' && 
+    //     Number.isFinite(stats.range) && 
+    //     stats.range > 2.0) {
+    //     const rangeColor = isPlacementValid ? 0xFFFFFF : 0xFF0000;
+    //     const rangePx = stats.range * safeCellSize;
+    //     safeDrawCircle(rangePx, rangeColor, 0.1, true);
+    // }
     
     // B. Spell Radius - HANYA jika RITUAL dan spellData.radius valid
     if (cardData.type === 'RITUAL' && 
@@ -233,14 +233,14 @@ function updateGhostVisuals() {
         safeDrawCircle(spellPx, 0xFFA500, 0.2, true);
     }
 
-    // C. AOE Radius - HANYA jika VESSEL dan valid
-    if (cardData.type === 'VESSEL' &&
-        typeof stats.aoeRadius === 'number' && 
-        Number.isFinite(stats.aoeRadius) && 
-        stats.aoeRadius > 0) {
-        const aoePx = stats.aoeRadius * safeCellSize;
-        safeDrawCircle(aoePx, 0xFF0000, 0.2, false);
-    }
+    // C. AOE Radius - DISABLE (User request: "bukan aoe dmg")
+    // if (cardData.type === 'VESSEL' &&
+    //     typeof stats.aoeRadius === 'number' && 
+    //     Number.isFinite(stats.aoeRadius) && 
+    //     stats.aoeRadius > 0) {
+    //     const aoePx = stats.aoeRadius * safeCellSize;
+    //     safeDrawCircle(aoePx, 0xFF0000, 0.2, false);
+    // }
 
     // D. Spawn Radius - HANYA jika VESSEL swarm valid
     if (cardData.type === 'VESSEL' &&
@@ -252,6 +252,19 @@ function updateGhostVisuals() {
         stats.spawnRadius > 0) {
         const spawnPx = stats.spawnRadius * safeCellSize;
         safeDrawCircle(spawnPx, 0x00FFFF, 0.1, true);
+    }
+
+    // E. OnSpawn Trait Radius (e.g. Electro Mage Spawn Damage)
+    if (cardData.type === 'VESSEL' &&
+        stats.traits &&
+        stats.traits.onSpawn &&
+        typeof stats.traits.onSpawn.radius === 'number' &&
+        Number.isFinite(stats.traits.onSpawn.radius) &&
+        stats.traits.onSpawn.radius > 0) {
+        
+        const traitPx = stats.traits.onSpawn.radius * safeCellSize;
+        // Use Green/Cyan to indicate "Effect" not "Attack Range"
+        safeDrawCircle(traitPx, 0x00FF00, 0.2, false);
     }
     
     ghostContainer.addChild(g);

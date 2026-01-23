@@ -55,7 +55,14 @@ function createPlayerState(faction) {
     hand: [], // 5 Cards
     
     connected: false,
-    ready: false // [NEW] Status Deck Submitted
+    ready: false, // [NEW] Status Deck Submitted
+
+    // [NEW] Taboo Global Modifiers
+    modifiers: {
+        arcanaRate: 1.0,
+        towerDamage: 1.0,
+        towerHp: 1.0
+    }
   };
 }
 
@@ -225,8 +232,6 @@ export function spawnUnit(state, data) {
         traits: data.traits || {},
 
         
-        
-
     });
     
     // [NEW] Global Silence Omen Check

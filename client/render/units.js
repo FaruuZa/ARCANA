@@ -82,6 +82,7 @@ export function syncUnits(units, layer) {
     updateHealthBar(container, unit);
     updateAttackAnimation(container, unit, unitAnimations.get(unit.id));
     updateUnitVisualEffects(container, unit); 
+    updateAuraVisuals(container, unit, _grid.cellSize); // [NEW] Aura
   });
 
   // Cleanup
@@ -194,11 +195,58 @@ function createUnitVisual(unit) {
   // [NEW] Outline Graphics (Initially hidden)
   const outline = new PIXI.Graphics();
   outline.name = "outline";
-  // Insert before bodySprite (index 0) so it's behind the unit, OR after if we want overlay. 
-  // User asked for "outline", usually outside. Putting it behind is safer for "glow" effect.
   container.addChildAt(outline, 0); 
+  
+  // [NEW] Aura Graphics
+  const aura = new PIXI.Graphics();
+  aura.name = "aura";
+  container.addChildAt(aura, 0); // Paling belakang
 
   return container;
+}
+
+function updateAuraVisuals(container, unit, cellSize) {
+    const aura = container.getChildByName("aura");
+    if (!aura) return;
+    
+    // Clear previous frame
+    aura.clear();
+    
+    // Check if unit has aura trait
+    if (unit.traits && unit.traits.aura && !unit.isSilenced) {
+        const radius = unit.traits.aura.radius * cellSize;
+        
+        // Determine Color
+        // Priority: Custom Color > Buff Type
+        let color = 0xFFD700; // Default Gold
+        let alpha = 0.15;
+        
+        if (unit.traits.aura.color) {
+            color = unit.traits.aura.color;
+        } else {
+            // Infer from buff type if possible
+            const buffs = unit.traits.aura.buffs || [];
+            if (buffs.length > 0) {
+                const type = buffs[0].type;
+                if (type === 'regen' || type === 'heal') color = 0x00FF00;
+                else if (type.includes('damage')) color = 0xFF0000;
+                else if (type === 'speed_mult' && buffs[0].value > 1) color = 0x00FFFF;
+                else if (type === 'defense' || type === 'shield') color = 0x0000FF;
+            }
+        }
+        
+        // Draw Aura Circle
+        aura.beginFill(color, alpha);
+        aura.drawCircle(0, 0, radius);
+        aura.endFill();
+        
+        // Border
+        aura.lineStyle(2, color, 0.5);
+        aura.drawCircle(0, 0, radius);
+        
+        // Optional: Pulse Animation based on time?
+        // We can use container.scale or just simple static for now to save perf
+    }
 }
 
 // === API PUBLIC UNTUK INPUT SYSTEM ===

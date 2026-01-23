@@ -85,10 +85,11 @@ export function syncEffects(effects, layer) {
 
 function createEffectVisual(ef) {
   const gfx = new PIXI.Graphics();
+  const color = ef.color || 0xFFFFFF; // [NEW] Custom Color Support
 
   if (ef.type === "explosion") {
     // [LAMA] Ledakan Api (Bomber/Ritual)
-    gfx.beginFill(0xFF4500, 0.6); 
+    gfx.beginFill(ef.color || 0xFF4500, 0.6); 
     gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
     gfx.endFill();
     gfx.lineStyle(4, 0xFFFF00, 1);
@@ -96,12 +97,14 @@ function createEffectVisual(ef) {
   }
   else if (ef.type === "spin") {
     // [BARU] Efek Putaran Valkyrie (Lingkaran angin/tebasan)
-    // Warna Cyan Terang
-    gfx.lineStyle(4, 0x00FFFF, 0.8);
+    // Warna Cyan Terang DEFAULT, atau Custom
+    const c = ef.color || 0x00FFFF;
+    
+    gfx.lineStyle(4, c, 0.8);
     gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
     
     // Isi sedikit transparan
-    gfx.beginFill(0x00FFFF, 0.2);
+    gfx.beginFill(c, 0.2);
     gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
     gfx.endFill();
 
@@ -113,8 +116,15 @@ function createEffectVisual(ef) {
   }
   else if (ef.type === "shockwave") {
     // [BARU] Efek Hentakan Tanah
-    gfx.lineStyle(3, 0xFFFFFF, 1); // Ring Putih
+    const c = ef.color || 0xFFFFFF;
+    gfx.lineStyle(3, c, 1); // Ring Putih/Custom
     gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
+    
+    if (ef.color) {
+        gfx.beginFill(c, 0.2);
+        gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
+        gfx.endFill();
+    }
   }
   // [NEW] Visual Lightning
   else if (ef.type === "lightning_strike") {
@@ -142,7 +152,7 @@ function createEffectVisual(ef) {
   }
   // [NEW] Poison Cloud (Zone)
   else if (ef.type === "circle_zone" && ef.damage > 0) {
-    gfx.beginFill(0x00FF00, 0.3); // Toxic Green
+    gfx.beginFill(ef.color || 0x00FF00, 0.3); // Toxic Green DEFAULT
     gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
     gfx.endFill();
     // Smoke particles logic would go in syncEffects loop

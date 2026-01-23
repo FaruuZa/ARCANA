@@ -8,6 +8,7 @@ export function updateBuffs(gameState, dt) {
     // 1. PROSES AURA (Trait Aura)
     for (const source of allEntities) {
         if (source.hp <= 0) continue;
+        if (source.isSilenced) continue; // [FIX] Block Aura when Silenced
         
         if (source.traits && source.traits.aura) {
             triggerTraitEffect(gameState, source, {

@@ -8,37 +8,14 @@ import { getUnitTexture } from "./visuals/generator.js";
 let _app, _grid;
 let ghostContainer;
 let ghostSprite;
+let forbiddenOverlay; // [NEW] Overlay Graphics
 let currentMousePos = { col: -1, row: -1 }; 
-let validOverlay;
 
 export function initGhost(app, grid) {
     _app = app;
     _grid = grid;
 
-    // 1. SETUP OVERLAY (KABUT MERAH)
-    validOverlay = new PIXI.Graphics();
-    validOverlay.zIndex = 5; 
-    validOverlay.visible = false;
-    
-    // Pastikan grid & constants aman
-    const safeCellSize = grid.cellSize || 40; 
-    const invalidRows = RIVER_ROW_END || 15;
-    
-    const overlayHeight = invalidRows * safeCellSize;
-    const overlayWidth = (GRID.cols || 18) * safeCellSize;
-
-    validOverlay.beginFill(0xFF0000, 0.3); 
-    validOverlay.drawRect(0, 0, overlayWidth, overlayHeight);
-    validOverlay.endFill();
-
-    validOverlay.lineStyle(2, 0xFF0000, 0.8);
-    validOverlay.moveTo(0, overlayHeight);
-    validOverlay.lineTo(overlayWidth, overlayHeight);
-    
-    validOverlay.x = grid.offsetX || 0;
-    validOverlay.y = grid.offsetY || 0;
-
-    app.stage.addChild(validOverlay);
+    // 1. SETUP OVERLAY REMOVED (User Request)
 
     // 2. SETUP GHOST CONTAINER
     ghostContainer = new PIXI.Container();
@@ -49,6 +26,12 @@ export function initGhost(app, grid) {
     ghostSprite.anchor.set(0.5);
     ghostSprite.alpha = 0.6;
     ghostContainer.addChild(ghostSprite);
+
+    // [NEW] Forbidden Overlay (Static on Stage)
+    forbiddenOverlay = new PIXI.Graphics();
+    forbiddenOverlay.zIndex = 900; // Below ghost (999)
+    forbiddenOverlay.visible = false;
+    app.stage.addChild(forbiddenOverlay);
 
     app.stage.addChild(ghostContainer);
 
@@ -71,37 +54,81 @@ function updateGhostVisuals() {
     const myTeamId = gameState.getMyTeam();
     if (!selection.cardId || selection.index === -1 || myTeamId === -1) {
         ghostContainer.visible = false;
-        if (validOverlay) validOverlay.visible = false; 
         return;
     }
 
     const cardData = CARDS[selection.cardId];
     if (!cardData) {
         // [DEBUG] Card belum ter-load atau typo ID
-        console.warn(`[GHOST] Card not found: ${selection.cardId}`, { 
-            cardsAvailable: Object.keys(CARDS).length,
-            selectedId: selection.cardId,
-            allCards: Object.keys(CARDS).slice(0, 5) // Log 5 pertama
-        });
+        console.warn(`[GHOST] Card not found: ${selection.cardId}`);
         ghostContainer.visible = false;
         return;
     }
 
-    // Validasi: VESSEL punya stats, RITUAL punya spellData
-    if (cardData.type === 'VESSEL' && !cardData.stats) {
-        console.warn(`[GHOST] VESSEL missing stats: ${selection.cardId}`);
+    // Validasi: VESSEL/SANCTUM punya stats, RITUAL punya spellData
+    if ((cardData.type === 'VESSEL' || cardData.type === 'SANCTUM') && !cardData.stats) {
+        // console.warn(`[GHOST] VESSEL missing stats: ${selection.cardId}`);
         return;
     }
     if (cardData.type === 'RITUAL' && !cardData.spellData) {
-        console.warn(`[GHOST] RITUAL missing spellData: ${selection.cardId}`);
+        // console.warn(`[GHOST] RITUAL missing spellData: ${selection.cardId}`);
         return;
     }
 
-    // 2. Visibility Overlay Merah (HANYA untuk VESSEL)
-    if (validOverlay) {
-        validOverlay.visible = (cardData.type === 'VESSEL');
-    }
+    // 2. Visibility Overlay Merah RESTORED (Forbidden Zones)
+    if (forbiddenOverlay) {
+        forbiddenOverlay.clear();
+        forbiddenOverlay.visible = false;
 
+        const myPlayer = gameState.players[myTeamId];
+        // Only show for VESSELS/SANCTUMS that respect territory
+        if ((cardData.type === 'VESSEL' || cardData.type === 'SANCTUM') && myPlayer) {
+            forbiddenOverlay.visible = true;
+            forbiddenOverlay.beginFill(0xFF0000, 0.3); // Red transparent
+
+            const cellSize = _grid.cellSize;
+            const cols = GRID.cols;
+            const rows = GRID.rows;
+            // Rows are 0 to rows-1.
+            
+            // Logic:
+            // Team 0 (Bottom): Can place in rows >= rows - RIVER_ROW_END?
+            // Wait, usually Team 0 is Bottom (Row ~60), Team 1 is Top (Row ~0).
+            // Let's assume standard:
+            // Team 0 spawns at Bottom. Valid: Row > (rows - RIVER_ROW_END)?
+            // Or usually RIVER_ROW_END defines the " river" boundary from the "start" side.
+            // Let's look at logic in pointer.js or existing validation.
+            // Actually, usually:
+            // Team 0 (Bottom): Valid Rows [Rows - Split, Rows]
+            // Forbidden: [0, Rows - Split)
+            
+            // If we don't know exact logic, let's assume Split is roughly half or derived from RIVER_ROW_END.
+            // Constants says RIVER_ROW_END.
+            // If RIVER_ROW_END is e.g. 28 (Grid 64).
+            // Team 0 (Bottom) valid: Rows [64-28=36 to 63].
+            // Forbidden: [0 to 35].
+            
+            // Team 1 (Top) valid: Rows [0 to 27].
+            // Forbidden: [28 to 63].
+            
+            const limit = RIVER_ROW_END || 25; // Fallback
+            
+            if (myTeamId === 0) {
+                // I am Bottom. Forbidden is Top.
+                // Draw Rect from (0,0) to (cols, rows - limit).
+                const forbiddenHeight = (rows - limit) * cellSize;
+                forbiddenOverlay.drawRect(0, 0, cols * cellSize, forbiddenHeight);
+            } else {
+                // I am Top. Forbidden is Bottom.
+                // Draw Rect from (0, limit) to (cols, rows).
+                const startY = limit * cellSize;
+                forbiddenOverlay.drawRect(0, startY, cols * cellSize, (rows - limit) * cellSize);
+            }
+            
+            forbiddenOverlay.endFill();
+        }
+    }
+    
     // 3. Logic Validasi Placement
     const myPlayer = gameState.players[myTeamId];
     const canAfford = myPlayer && myPlayer.arcana >= cardData.cost;
@@ -115,17 +142,25 @@ function updateGhostVisuals() {
     } 
     // Untuk VESSEL: pointer.js sudah validasi territory (RIVER_ROW_END), percaya nilai itu
     // Jika row invalid, pointer.js akan pass -1,-1 ke updateGhostPosition
+    if (currentMousePos.col === -1 || currentMousePos.row === -1) {
+        isPlacementValid = false;
+    }
 
     // 4. Update Posisi Ghost
     const screenPos = unitToScreen(currentMousePos, _grid);
     if (!screenPos || !Number.isFinite(screenPos.x) || !Number.isFinite(screenPos.y)) return; 
-
+    
+    // Default visible unless placement invalid AND pointer outside?
+    // Actually we want ghost always visible under mouse if dragging? 
+    // Logic: if mouse is on canvas, show ghost.
+    // Placement validity determines COLOR.
+    
     ghostContainer.x = screenPos.x;
     ghostContainer.y = screenPos.y;
-    ghostContainer.visible = true;
+    ghostContainer.visible = true; 
 
-    // 5. Update Texture (Procedural) - HANYA untuk VESSEL
-    if (cardData.type === 'VESSEL') {
+    // 5. Update Texture (Procedural) - HANYA untuk VESSEL/SANCTUM
+    if (cardData.type === 'VESSEL' || cardData.type === 'SANCTUM') {
         const myTeamId = gameState.getMyTeam();
         let factionName = 'solaris';
         if (gameState.players && gameState.players[myTeamId]) {
@@ -136,7 +171,7 @@ function updateGhostVisuals() {
             ghostSprite.texture = texture;
             ghostSprite.visible = true;  // ← RESTORE visibility untuk VESSEL!
         } else {
-            console.warn(`No texture generated for ${selection.cardId}`);
+            // console.warn(`No texture generated for ${selection.cardId}`);
             ghostSprite.visible = true;  // Tetap tampil meski no texture
         }
     } else if (cardData.type === 'RITUAL') {
@@ -144,8 +179,8 @@ function updateGhostVisuals() {
         ghostSprite.visible = false;
     }
 
-    // 6. Update Scale (HANYA untuk VESSEL)
-    if (cardData.type === 'VESSEL' && cardData.stats) {
+    // 6. Update Scale (HANYA untuk VESSEL/SANCTUM)
+    if ((cardData.type === 'VESSEL' || cardData.type === 'SANCTUM') && cardData.stats) {
         const stats = cardData.stats || {};
         const unitRadius = Number(stats.radius) || 0.4; // Force Number
         
@@ -159,8 +194,8 @@ function updateGhostVisuals() {
         ghostSprite.scale.set(scaleVal);
     }
 
-    // 7. Tinting (HANYA untuk VESSEL)
-    if (cardData.type === 'VESSEL') {
+    // 7. Tinting (HANYA untuk VESSEL/SANCTUM)
+    if (cardData.type === 'VESSEL' || cardData.type === 'SANCTUM') {
         if (!isPlacementValid) {
             ghostSprite.tint = 0xFF0000; 
         } else if (!canAfford) {
@@ -213,34 +248,20 @@ function updateGhostVisuals() {
     const safeCellSize = _grid.cellSize;
     const stats = cardData.stats || {};
 
-    // A. Range Circle - DISABLE VISUAL RANGE (Sesuai Request)
-    // if (cardData.type === 'VESSEL' && 
-    //     typeof stats.range === 'number' && 
-    //     Number.isFinite(stats.range) && 
-    //     stats.range > 2.0) {
-    //     const rangeColor = isPlacementValid ? 0xFFFFFF : 0xFF0000;
-    //     const rangePx = stats.range * safeCellSize;
-    //     safeDrawCircle(rangePx, rangeColor, 0.1, true);
-    // }
-    
     // B. Spell Radius - HANYA jika RITUAL dan spellData.radius valid
     if (cardData.type === 'RITUAL' && 
         cardData.spellData && 
         typeof cardData.spellData.radius === 'number' && 
         Number.isFinite(cardData.spellData.radius) && 
         cardData.spellData.radius > 0) {
+        
+        const isTargetValid = isPlacementValid; // If inside grid
+        const rangeColor = isTargetValid ? (canAfford ? 0x00FFFF : 0xFFA500) : 0xFF0000;
+        
         const spellPx = cardData.spellData.radius * safeCellSize;
-        safeDrawCircle(spellPx, 0xFFA500, 0.2, true);
+        safeDrawCircle(spellPx, rangeColor, 0.2, true);
     }
 
-    // C. AOE Radius - DISABLE (User request: "bukan aoe dmg")
-    // if (cardData.type === 'VESSEL' &&
-    //     typeof stats.aoeRadius === 'number' && 
-    //     Number.isFinite(stats.aoeRadius) && 
-    //     stats.aoeRadius > 0) {
-    //     const aoePx = stats.aoeRadius * safeCellSize;
-    //     safeDrawCircle(aoePx, 0xFF0000, 0.2, false);
-    // }
 
     // D. Spawn Radius - HANYA jika VESSEL swarm valid
     if (cardData.type === 'VESSEL' &&
@@ -252,19 +273,6 @@ function updateGhostVisuals() {
         stats.spawnRadius > 0) {
         const spawnPx = stats.spawnRadius * safeCellSize;
         safeDrawCircle(spawnPx, 0x00FFFF, 0.1, true);
-    }
-
-    // E. OnSpawn Trait Radius (e.g. Electro Mage Spawn Damage)
-    if (cardData.type === 'VESSEL' &&
-        stats.traits &&
-        stats.traits.onSpawn &&
-        typeof stats.traits.onSpawn.radius === 'number' &&
-        Number.isFinite(stats.traits.onSpawn.radius) &&
-        stats.traits.onSpawn.radius > 0) {
-        
-        const traitPx = stats.traits.onSpawn.radius * safeCellSize;
-        // Use Green/Cyan to indicate "Effect" not "Attack Range"
-        safeDrawCircle(traitPx, 0x00FF00, 0.2, false);
     }
     
     ghostContainer.addChild(g);

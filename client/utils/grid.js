@@ -1,10 +1,11 @@
 import { GRID, LANE_COLUMNS } from "../../shared/constants.js";
 import { myTeamId } from "../state/gameState.js";
 
-export function createGrid(app) {
+// [MODIFIED] We now export updateGrid to mutate the grid object
+export function updateGrid(grid, app) {
   const usableWidth = app.screen.width;
   const usableHeight = app.screen.height;
-  
+
   // Hitung ukuran cell baru yang lebih kecil
   const cellSize = Math.min(
     usableWidth / GRID.cols,
@@ -15,20 +16,29 @@ export function createGrid(app) {
   const boardHeight = cellSize * GRID.rows;
 
   const offsetX = (usableWidth - boardWidth) / 2;
-
-  // const verticalShift = usableHeight * 0.12; 
-  // const offsetY = ((usableHeight - boardHeight) / 2) - verticalShift;
   const offsetY = (usableHeight - boardHeight) / 2;
 
-  return {
+  // Update properties in place
+  grid.cellSize = cellSize;
+  grid.boardWidth = boardWidth;
+  grid.boardHeight = boardHeight;
+  grid.offsetX = offsetX;
+  grid.offsetY = offsetY;
+}
+
+export function createGrid(app) {
+  const grid = {
     cols: GRID.cols,
     rows: GRID.rows,
-    cellSize,
-    boardWidth,
-    boardHeight,
-    offsetX,
-    offsetY,
+    cellSize: 0,
+    boardWidth: 0,
+    boardHeight: 0,
+    offsetX: 0,
+    offsetY: 0,
   };
+  
+  updateGrid(grid, app);
+  return grid;
 }
 
 export function unitToScreen(unit, grid) {
@@ -68,4 +78,3 @@ export function unitToScreen(unit, grid) {
 
   return { x, y };
 }
-

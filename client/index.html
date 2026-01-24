@@ -5,14 +5,42 @@
   <title>Arcana</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="lobby.css"> <!-- [NEW] Special Lobby Styles -->
 </head>
 <body>
 
-<div id="game-viewport">
+<div id="lobby-screen">
+    <div class="lobby-container">
+        <div class="lobby-header">
+            <h1 class="lobby-title">ARCANA</h1>
+            <p class="lobby-subtitle">FORGE YOUR DESTINY</p>
+        </div>
+        
+        <div class="lobby-content">
+            <div class="lobby-controls">
+                <input type="text" id="room-name-input" placeholder="Name your battlefield..." maxlength="20">
+                <button id="btn-create-room" class="btn-create-lobby">CONJURE REALM</button>
+            </div>
+
+            <div class="room-list-panel">
+                <div class="room-list-header">
+                    <h3>ACTIVE REALMS</h3>
+                    <button id="btn-refresh-rooms" class="btn-refresh">↻</button>
+                </div>
+                <div id="room-list-items">
+                    <!-- Rooms go here -->
+                    <div class="loading-text">Divining the leylines...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="game-viewport" style="display:none;">
   <div id="toast-container"></div>
         
   <div id="canvas-container">
-    <div id="status" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); color:white; font-weight:bold; text-shadow:1px 1px 0 #000; z-index:200;">
+    <div id="status" style="position:absolute; top:10px; left:10px; color:white; font-weight:bold; text-shadow:1px 1px 0 #000; z-index:200; font-family: sans-serif; font-size: 14px; opacity: 0.7;">
     </div>
   </div>
 

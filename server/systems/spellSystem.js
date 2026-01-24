@@ -19,7 +19,7 @@ export function castRitual(gameState, playerId, teamId, cardId, targetPos, targe
             teamId,
             card,
             spell, // copy ref
-            targetPos: {...targetPos}, // copy val
+            targetPos: { ...targetPos }, // copy val
             targetId,
             timer: spell.delay,
             maxTimer: spell.delay
@@ -37,11 +37,11 @@ function triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos,
         if (player) {
             player.arcana = Math.min(player.maxArcana || 10, player.arcana + spell.value);
         }
-        
+
         // Visual Effect (Coin/Mana burst)
         gameState.effects.push({
             id: gameState.nextEntityId++,
-            type: "buff_shine", 
+            type: "buff_shine",
             col: targetPos.col || 9,
             row: targetPos.row || (teamId === 0 ? 30 : 5),
             radius: 1.0,
@@ -51,21 +51,21 @@ function triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos,
     }
 
     if (spell.type === "single_target") {
-        if (!targetId) return; 
+        if (!targetId) return;
 
         // Re-find target (it might have died during delay)
         const entities = [...gameState.units, ...gameState.buildings];
         const target = entities.find(e => e.id === targetId);
 
-        if (!target || target.hp <= 0) return; 
-        
+        if (!target || target.hp <= 0) return;
+
         // Update Target Pos to follow unit
         targetPos = { col: target.col, row: target.row };
 
         let isTeamValid = false;
         if (spell.targetTeam === 'both') isTeamValid = true;
         else if (spell.targetTeam === 'ally') isTeamValid = (target.team === teamId);
-        else isTeamValid = (target.team !== teamId); 
+        else isTeamValid = (target.team !== teamId);
 
         if (!isTeamValid) return;
 
@@ -74,7 +74,7 @@ function triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos,
         if (spell.buffs) {
             spell.buffs.forEach(buffConfig => {
                 applyBuff(target, {
-                    name: card.name + "_" + buffConfig.type, 
+                    name: card.name + "_" + buffConfig.type,
                     type: buffConfig.type,
                     value: buffConfig.value,
                     duration: buffConfig.duration,
@@ -85,7 +85,7 @@ function triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos,
 
         gameState.effects.push({
             id: gameState.nextEntityId++,
-            type: "lightning_strike", 
+            type: "lightning_strike",
             col: target.col,
             row: target.row,
             radius: 0.5,
@@ -98,9 +98,9 @@ function triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos,
         dealAreaDamage(
             gameState,
             targetPos,
-            spell.radius, 
-            spell.damage, 
-            teamId, 
+            spell.radius,
+            spell.damage,
+            teamId,
             'both',
             'enemy',
             spell.buffs // [FIX] NOW PASSING BUFFS (STUN ETC)
@@ -119,7 +119,7 @@ function triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos,
 
     else if (spell.type === "buff_area") {
         const entities = [...gameState.units, ...gameState.buildings];
-        
+
         entities.forEach(entity => {
             if (entity.hp <= 0) return;
 
@@ -134,7 +134,7 @@ function triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos,
                 if (spell.buffs) {
                     spell.buffs.forEach(buffConfig => {
                         applyBuff(entity, {
-                            name: card.name + "_" + buffConfig.type, 
+                            name: card.name + "_" + buffConfig.type,
                             type: buffConfig.type,
                             value: buffConfig.value,
                             duration: buffConfig.duration,
@@ -142,10 +142,10 @@ function triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos,
                         });
                     });
                 }
-                
+
                 gameState.effects.push({
                     id: gameState.nextEntityId++,
-                    type: "buff_shine", 
+                    type: "buff_shine",
                     col: entity.col,
                     row: entity.row,
                     radius: 0.5,
@@ -175,15 +175,15 @@ function triggerSpellEffect(gameState, playerId, teamId, card, spell, targetPos,
             radius: spell.radius,
             duration: spell.duration,
             interval: spell.interval || 0.5,
-            tickTimer: 0, 
+            tickTimer: 0,
             damage: spell.damage || 0,
             buffs: spell.buffs || [],
-            targetTeam: spell.targetTeam || 'enemy' 
+            targetTeam: spell.targetTeam || 'enemy'
         });
 
         gameState.effects.push({
             id: gameState.nextEntityId++,
-            type: "circle_zone", 
+            type: "circle_zone",
             col: targetPos.col,
             row: targetPos.row,
             radius: spell.radius,
@@ -219,7 +219,7 @@ export function updateSpells(gameState, dt) {
     // ... existing lingering logic ...
     for (let i = activeSpells.length - 1; i >= 0; i--) {
         const spell = activeSpells[i];
-        
+
         spell.duration -= dt;
         spell.tickTimer -= dt;
 
@@ -228,41 +228,41 @@ export function updateSpells(gameState, dt) {
 
             // LOGIC AREA EFFECT
             if (spell.damage > 0) {
-                 dealAreaDamage(
-                    gameState, 
-                    spell, 
-                    spell.radius, 
-                    spell.damage, 
-                    spell.team, 
-                    'both', 
-                    spell.targetTeam, 
-                    spell.buffs 
+                dealAreaDamage(
+                    gameState,
+                    spell,
+                    spell.radius,
+                    spell.damage,
+                    spell.team,
+                    'both',
+                    spell.targetTeam,
+                    spell.buffs
                 );
-            } else if (spell.buffs && spell.buffs.length > 0) {
-                // Manual Scan
-                const entities = [...gameState.units, ...gameState.buildings];
-                for (const entity of entities) {
-                    if (entity.hp <= 0) continue;
-                    
-                    let isValid = false;
-                    if (spell.targetTeam === 'ally' && entity.team === spell.team) isValid = true;
-                    if (spell.targetTeam === 'enemy' && entity.team !== spell.team) isValid = true;
-                    if (spell.targetTeam === 'any') isValid = true;
+            }
+        } else if (spell.buffs && spell.buffs.length > 0) {
+            // Manual Scan
+            const entities = [...gameState.units, ...gameState.buildings];
+            for (const entity of entities) {
+                if (entity.hp <= 0) continue;
 
-                    if (isValid && distance(spell, entity) <= spell.radius) {
-                        spell.buffs.forEach(b => {
-                            applyBuff(entity, { 
-                                ...b, 
-                                sourceId: spell.id 
-                            });
+                let isValid = false;
+                if (spell.targetTeam === 'ally' && entity.team === spell.team) isValid = true;
+                if (spell.targetTeam === 'enemy' && entity.team !== spell.team) isValid = true;
+                if (spell.targetTeam === 'any') isValid = true;
+
+                if (isValid && distance(spell, entity) <= spell.radius) {
+                    spell.buffs.forEach(b => {
+                        applyBuff(entity, {
+                            ...b,
+                            sourceId: spell.id
                         });
-                    }
+                    });
                 }
             }
         }
-
         if (spell.duration <= 0) {
             activeSpells.splice(i, 1);
         }
     }
+
 }

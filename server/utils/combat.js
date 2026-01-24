@@ -50,6 +50,9 @@ export function dealAreaDamage(gameState, origin, radius, damage, attackerTeam, 
 
         if (!isTeamValid) continue;
 
+        // [NEW] Building Only Check
+        if (targetRule === 'building_only' && entity.entityType !== 'building') continue;
+
         const dist = distance(origin, entity);
         
         if (dist <= radius + 0.5) { // +0.5 toleransi radius tubuh

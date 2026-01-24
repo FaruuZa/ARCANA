@@ -1,0 +1,243 @@
+/* --- LOBBY THEME: VOID & ARCANA --- */
+body {
+    background-color: #050508;
+    color: #e0e0e0;
+}
+
+#lobby-screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    /* Mystical Background */
+    background: radial-gradient(circle at 50% 30%, #1a0b1f 0%, #050508 70%);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cinzel', serif;
+}
+
+.lobby-container {
+    width: 90%;
+    max-width: 600px;
+    background: rgba(15, 12, 20, 0.9);
+    border: 1px solid #332244;
+    border-radius: 4px;
+    padding: 0;
+    box-shadow: 0 0 80px rgba(89, 0, 255, 0.1), inset 0 0 50px rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Decorative Top Border */
+.lobby-container::before {
+    content: "";
+    position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+    background: linear-gradient(90deg, transparent, #c5a059, transparent);
+    box-shadow: 0 0 10px #c5a059;
+}
+
+.lobby-header {
+    text-align: center;
+    padding: 40px 20px 20px;
+}
+
+.lobby-title {
+    font-family: 'Cinzel', serif;
+    font-size: 56px;
+    color: #fff;
+    margin: 0;
+    letter-spacing: 12px;
+    background: linear-gradient(to bottom, #fff, #888);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 10px 20px rgba(0,0,0,0.8);
+    font-weight: 700;
+}
+
+.lobby-subtitle {
+    font-family: 'Lato', sans-serif;
+    font-size: 12px;
+    color: #8a7b99;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-top: 10px;
+}
+
+.lobby-content {
+    width: 100%;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Controls */
+.lobby-controls {
+    display: flex;
+    gap: 0;
+    width: 100%;
+    border: 1px solid #333;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #0a0a0c;
+}
+
+#room-name-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #d4c5e3;
+    padding: 15px 20px;
+    font-family: 'Lato', sans-serif;
+    font-size: 14px;
+    outline: none;
+}
+#room-name-input::placeholder { color: #444; font-style: italic; }
+
+.btn-create-lobby {
+    background: #1a1a20;
+    color: #c5a059;
+    border: none;
+    border-left: 1px solid #333;
+    padding: 0 30px;
+    font-family: 'Cinzel', serif;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.btn-create-lobby:hover {
+    background: #c5a059;
+    color: #000;
+    text-shadow: none;
+}
+
+/* Room List */
+.room-list-panel {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid #2a2a35;
+    border-radius: 4px;
+    min-height: 250px;
+    display: flex; flex-direction: column;
+}
+
+.room-list-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid #2a2a35;
+}
+
+.room-list-header h3 {
+    margin: 0; 
+    font-size: 12px;
+    font-weight: 400; 
+    color: #666;
+    letter-spacing: 2px;
+}
+
+.btn-refresh {
+    background: none; border: none;
+    color: #666; cursor: pointer;
+    font-size: 18px; transition: color 0.3s;
+}
+.btn-refresh:hover { color: #fff; transform: rotate(180deg); }
+
+#room-list-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+/* Scrollbar */
+#room-list-items::-webkit-scrollbar { width: 4px; }
+#room-list-items::-webkit-scrollbar-track { background: #111; }
+#room-list-items::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+/* Room Item */
+.room-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.03);
+    padding: 15px 20px;
+    margin-bottom: 8px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.room-item:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: #333;
+}
+
+.room-item::before {
+    content: "";
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: #333;
+    transition: background 0.2s;
+}
+.room-item:hover::before { background: #c5a059; }
+
+.room-info { display: flex; flex-direction: column; gap: 4px; }
+
+.room-name {
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    color: #e0e0e0;
+    font-weight: bold;
+}
+
+.room-stats {
+    font-family: 'Lato', sans-serif;
+    font-size: 11px;
+    color: #777;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-join {
+    background: transparent;
+    border: 1px solid #444;
+    color: #aaa;
+    padding: 8px 16px;
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 100px;
+    text-align: center;
+}
+
+.btn-join:hover {
+    border-color: #c5a059;
+    color: #c5a059;
+}
+
+/* State: Full/Spectate */
+.btn-spectate {
+    border-color: #9c27b0;
+    color: #9c27b0;
+}
+.btn-spectate:hover {
+    background: #9c27b0;
+    color: #fff;
+    box-shadow: 0 0 15px rgba(156, 39, 176, 0.4);
+}
+
+.loading-text {
+    width: 100%; text-align: center;
+    padding: 40px;
+    color: #444;
+    font-style: italic;
+    font-family: 'Lato', sans-serif;
+    font-size: 13px;
+}

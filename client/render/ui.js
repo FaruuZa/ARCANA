@@ -48,7 +48,12 @@ if (btnRematch) {
 }
 
 const btnQuit = document.getElementById("btn-quit");
-if (btnQuit) btnQuit.onclick = () => alert("Quit feature coming soon!");
+if (btnQuit) {
+    btnQuit.onclick = () => {
+        // Reload page to return to lobby cleanly
+        window.location.reload();
+    };
+}
 
 export function initUI() {
   _socket = initSocket();
@@ -124,6 +129,9 @@ function updatePanelState(state) {
            } else {
                renderDeckBuilder(state.players[myTeamId].faction);
            }
+      } else if (myTeamId === -1) {
+           // Spectator View during Deck Building
+           renderSpectatorWaitingScreen(state);
       }
       
       if (elGameOver) elGameOver.classList.add("hidden");
@@ -611,11 +619,18 @@ function renderSpectatorHUD(state) {
 
   let html = `<div class="spectator-hud-container"><h2 style="color:#fff; margin:0;">SPECTATOR MODE</h2>`;
   
+  // Checking Disconnects
   if (!p0.connected) html += `<div style="text-align:center;"><div class="spectator-status-text">Solaris (Blue) is Disconnected!</div><button class="spectator-join-btn" onclick="window.joinGame(0)">TAKE OVER SOLARIS</button></div>`;
-  
   if (!p1.connected) html += `<div style="text-align:center;"><div class="spectator-status-text">Noctis (Red) is Disconnected!</div><button class="spectator-join-btn" onclick="window.joinGame(1)">TAKE OVER NOCTIS</button></div>`;
   
-  if (p0.connected && p1.connected) html += `<div class="spectator-status-text">Match in progress...</div>`;
+  if (state.phase === 'ended') {
+      html += `<div style="text-align:center; margin-top:10px;">
+        <div class="spectator-status-text">GAME OVER</div>
+        <button class="spectator-join-btn" onclick="window.location.reload()">LEAVE ARENA</button>
+      </div>`;
+  } else if (p0.connected && p1.connected) {
+      html += `<div class="spectator-status-text">Match in progress...</div>`;
+  }
   
   html += `</div>`;
   elHand.innerHTML = html;
@@ -649,3 +664,68 @@ window.joinGame = (teamId) => {
     showToast("Requesting to join...", "info");
   }
 };
+
+function renderSpectatorWaitingScreen(state) {
+    const db = document.getElementById("deck-builder");
+    // Reuse deck-builder container ID for simplicity, but content is different
+    if (db && db.dataset.mode === 'spectate') {
+        // Update stats if needed
+        const p0Ready = state.players[0].ready ? "READY" : "PREPARING";
+        const p1Ready = state.players[1].ready ? "READY" : "PREPARING";
+        const p0Status = document.getElementById("spec-p0-status");
+        const p1Status = document.getElementById("spec-p1-status");
+        if(p0Status) {
+            p0Status.innerText = p0Ready;
+            p0Status.className = state.players[0].ready ? "status-ready" : "status-prep";
+        }
+        if(p1Status) {
+            p1Status.innerText = p1Ready;
+            p1Status.className = state.players[1].ready ? "status-ready" : "status-prep";
+        }
+        return;
+    }
+
+    const container = document.createElement("div");
+    container.id = "deck-builder";
+    container.dataset.mode = "spectate";
+    container.style.width = "100%";
+    container.style.height = "100%";
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+    container.style.alignItems = "center";
+    container.style.justifyContent = "center";
+    container.style.color = "#fff";
+    container.style.gap = "20px";
+
+    const p0Ready = state.players[0].ready ? "READY" : "PREPARING";
+    const p1Ready = state.players[1].ready ? "READY" : "PREPARING";
+
+    container.innerHTML = `
+        <h2 style="font-family:var(--font-title); color:#aaa; font-size:24px; margin:0;">THE VOID WATCHES</h2>
+        <div style="font-style:italic; color:#666; margin-bottom:20px;">The chosen ones are weaving their fate...</div>
+        
+        <div style="display:flex; gap:40px; width:80%; justify-content:center;">
+             <div style="text-align:center;">
+                 <div style="color:var(--gold); font-family:var(--font-title); font-size:18px; margin-bottom:5px;">SOLARIS</div>
+                 <div id="spec-p0-status" class="${state.players[0].ready ? "status-ready" : "status-prep"}" style="font-size:12px; letter-spacing:1px;">${p0Ready}</div>
+             </div>
+             
+             <div style="width:1px; background:#333;"></div>
+             
+             <div style="text-align:center;">
+                 <div style="color:var(--arcana-purple); font-family:var(--font-title); font-size:18px; margin-bottom:5px;">NOCTIS</div>
+                 <div id="spec-p1-status" class="${state.players[1].ready ? "status-ready" : "status-prep"}" style="font-size:12px; letter-spacing:1px;">${p1Ready}</div>
+             </div>
+        </div>
+        
+        <style>
+            .status-ready { color: #4caf50; font-weight:bold; }
+            .status-prep { color: #888; animation: pulse 2s infinite; }
+            @keyframes pulse { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
+        </style>
+    `;
+
+    // Clear previous content of bottom panel
+    elBottomPanel.innerHTML = "";
+    elBottomPanel.appendChild(container);
+}

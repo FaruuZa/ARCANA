@@ -11,15 +11,42 @@ export function updateBuffs(gameState, dt) {
         if (source.isSilenced) continue; // [FIX] Block Aura when Silenced
         
         if (source.traits && source.traits.aura) {
-            triggerTraitEffect(gameState, source, {
-                type: 'buff_area',
-                radius: source.traits.aura.radius,
-                targetTeam: source.traits.aura.targetTeam || 'ally',
-                buffs: source.traits.aura.buffs.map(b => ({
-                    ...b,
-                    duration: 0.2 // Refresh per tick (0.033s), kasih buffer 0.2s biar gak kedip
-                }))
-            });
+            const aura = source.traits.aura;
+            
+            // [NEW] Aura Timer Logic
+            if (source.auraTimer === undefined) source.auraTimer = 0;
+            source.auraTimer -= dt;
+            
+            if (source.auraTimer <= 0) {
+                // Reset Timer
+                const interval = aura.interval || 0.2;
+                source.auraTimer = interval;
+
+                // 1. DAMAGE AURA (Cursed Idol, Spikes)
+                if (aura.damage && aura.damage > 0) {
+                    // Gunakan triggerTraitEffect untuk visual + damage
+                    triggerTraitEffect(gameState, source, {
+                        type: 'damage_aoe',
+                        radius: aura.radius,
+                        damage: aura.damage,
+                        targetTeam: aura.targetTeam || 'enemy',
+                        // Pass other props if needed
+                    });
+                }
+
+                // 2. BUFF AURA (Existing Logic + Safety)
+                if (aura.buffs && Array.isArray(aura.buffs)) {
+                    triggerTraitEffect(gameState, source, {
+                        type: 'buff_area',
+                        radius: aura.radius,
+                        targetTeam: aura.targetTeam || 'ally',
+                        buffs: aura.buffs.map(b => ({
+                            ...b,
+                            duration: interval + 0.1 // Duration > Interval to prevent flickering
+                        }))
+                    });
+                }
+            }
         }
     }
 

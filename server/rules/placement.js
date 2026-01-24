@@ -1,12 +1,14 @@
 import { GRID, RIVER_ROW_START, RIVER_ROW_END } from "../../shared/constants.js";
 
-// [NEW] Hardcode posisi Tower statis (sesuai gameState.js)
 // Format: {col, row_offset_from_base}
 const TOWER_LOCATIONS = [
     { col: 3, rowOffset: 6 },   // Left Side
     { col: 9, rowOffset: 3 },   // King
     { col: 15, rowOffset: 6 }   // Right Side
 ];
+
+// Constants for Sanctum Placement
+const MIN_BUILDING_DIST = 1.0;
 
 const TOWER_BLOCK_RADIUS = 1.5; // Radius area terlarang di sekitar tower
 
@@ -47,6 +49,32 @@ export function isValidPlacement(team, col, row) {
   }
 
   return true;
+}
+
+/**
+ * Validates no overlap with existing buildings (for Sanctums).
+ */
+export function isValidBuildingPlacement(gameState, col, row, radius = 1.0) {
+    if (!gameState || !gameState.buildings) return true; // Safety
+
+    // Check against all existing buildings
+    for (const b of gameState.buildings) {
+        if (b.hp <= 0) continue;
+        
+        // Simple circle collision
+        const dx = col - b.col;
+        const dy = row - b.row;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        // Allowed min distance (radius + radius)
+        // Assume default building radius if not set? usually 1.0
+        const bRadius = b.radius || 1.0;
+        
+        if (dist < (radius + bRadius)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 export function getPlacementError(team, col, row) {

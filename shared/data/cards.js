@@ -496,5 +496,246 @@ export const CARDS = {
       targetRule: 'any', targetHeight: 'ground'
     },
     description: "A once-noble hero corrupted by the void. Strikes blindly at friend and foe alike."
+  },
+  // === SANCTUM (Buildings) ===
+  
+  "sanctum_tower": {
+    id: "sanctum_tower",
+    name: "Sentry Post",
+    type: "SANCTUM", 
+    minFaction: "neutral",
+    cost: 4,
+    stats: {
+      hp: 1200, damage: 30, range: 6.0, sightRange: 7.0, speed: 0, attackSpeed: 1.0,
+      deployTime: 5.0, 
+      movementType: 'none',
+      targetTeam: 'enemy', targetRule: 'any', targetHeight: 'both',
+      isBuilding: true,
+      radius: 0.8
+    },
+    description: "A defensive structure that fires upon enemies."
+  },
+
+  "sanctum_wall": {
+    id: "sanctum_wall",
+    name: "Barricade",
+    type: "SANCTUM",
+    minFaction: "neutral",
+    cost: 2,
+    stats: {
+      hp: 2000, damage: 0, range: 0, sightRange: 2.0, speed: 0, attackSpeed: 0,
+      deployTime: 3.0,
+      movementType: 'none',
+      targetTeam: 'none',
+      isBuilding: true,
+      radius: 0.8
+    },
+    description: "A sturdy wall to block enemy pathing."
+  },
+
+  // === MORE TABOO CARDS ===
+
+  "ritual_blood_sacrifice": {
+    id: "ritual_blood_sacrifice",
+    name: "Blood Sacrifice",
+    type: "RITUAL",
+    minFaction: "noctis",
+    isTaboo: true,
+    demerit: { type: 'hq_damage', value: 500 }, // Hurts own King Tower
+    cost: 0,
+    spellData: {
+        type: "gain_mana", value: 3
+    },
+    description: "Sacrifice your King's health to gain immediate Arcana."
+  },
+
+  "sanctum_cursed_idol": {
+    id: "sanctum_cursed_idol",
+    name: "Cursed Idol",
+    type: "SANCTUM",
+    minFaction: "neutral",
+    cost: 3,
+    stats: {
+      hp: 2500, damage: 0, range: 0, speed: 0,
+      movementType: 'none',
+      isBuilding: true,
+      radius: 1.0, 
+      traits: {
+        aura: { radius: 3.0, targetTeam: 'all', damage: 20, interval: 1.0 } // Rots everyone nearby
+      }
+    },
+    description: "A structure with immense durability that decays everything around it, including allies."
+  },
+
+  // === NEW FACTION UNITS ===
+
+  // SOLARIS
+  "vessel_sun_guardian": {
+    id: "vessel_sun_guardian",
+    name: "Sun Guardian",
+    type: "VESSEL",
+    minFaction: "solaris",
+    cost: 6,
+    stats: {
+      hp: 1400, damage: 60, range: 1.5, speed: 2.5, attackSpeed: 1.0,
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'any',
+      traits: {
+          onHit: { chance: 0.3, type: 'blind', duration: 2.0 } // Blinds enemies
+      }
+    },
+    description: "A heavily armored guardian whose shield reflects blinding light."
+  },
+
+  "vessel_dawn_breaker": {
+    id: "vessel_dawn_breaker",
+    name: "Dawn Breaker",
+    type: "VESSEL",
+    minFaction: "solaris",
+    cost: 5,
+    stats: {
+      hp: 750, damage: 120, range: 1.5, speed: 3.5, attackSpeed: 1.4,
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'any',
+      aoeRadius: 1.5 // Cleave attack
+    },
+    description: "Wields a massive hammer that strikes multiple enemies at once."
+  },
+
+  // NOCTIS
+  "vessel_night_shade": {
+    id: "vessel_night_shade",
+    name: "Night Shade",
+    type: "VESSEL",
+    minFaction: "noctis",
+    cost: 2,
+    stats: {
+      hp: 200, damage: 80, range: 1.0, speed: 6.0, attackSpeed: 0.6, // Very fast, glass cannon
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'any'
+    },
+    description: "A swift assassin that strikes from the shadows."
+  },
+
+  "vessel_void_walker": {
+    id: "vessel_void_walker",
+    name: "Void Walker",
+    type: "VESSEL",
+    minFaction: "noctis",
+    cost: 5,
+    stats: {
+      hp: 900, damage: 65, range: 1.5, speed: 3.0, attackSpeed: 1.0,
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'any',
+      traits: {
+        shield: { value: 300, regen: 0 } // Starts with a void shield
+      }
+    },
+    description: "Protected by a dark barrier that absorbs damage."
+  },
+  // === MORE NEW CARDS ===
+
+  "vessel_radiant_wisp": {
+    id: "vessel_radiant_wisp",
+    name: "Radiant Wisp",
+    type: "VESSEL",
+    minFaction: "solaris",
+    cost: 3,
+    stats: {
+      hp: 200, damage: -40, range: 3.0, speed: 4.0, attackSpeed: 1.0,
+      movementType: 'air', // Flying
+      targetTeam: 'ally', targetRule: 'unit_only',
+      aoeRadius: 2.0 // AoE Heal
+    },
+    description: "A flying spirit that heals nearby allies."
+  },
+
+  "vessel_void_ray": {
+    id: "vessel_void_ray",
+    name: "Void Ray",
+    type: "VESSEL",
+    minFaction: "noctis",
+    cost: 5,
+    stats: {
+      hp: 550, damage: 20, range: 4.0, speed: 3.5, attackSpeed: 0.2, // Fast ticks
+      movementType: 'air',
+      targetTeam: 'enemy', targetRule: 'any',
+      traits: { rampUp: { value: 5, max: 100 } } // Damage increases over time (needs logic support?)
+    },
+    description: "A flying construct that focuses a beam of void energy."
+  },
+
+  "ritual_earthquake": {
+    id: "ritual_earthquake",
+    name: "Earthquake",
+    type: "RITUAL",
+    minFaction: "neutral",
+    cost: 4,
+    spellData: {
+        type: "damage_aoe", damage: 100, radius: 4.0, 
+        targetTeam: 'enemy', targetRule: 'building_only', // Focus buildings
+        buffs: [{ type: 'speed_mult', value: 0.3, duration: 3.0 }] // Slows units too logic dependent
+    },
+    description: "Shakes the ground, dealing damage to buildings and slowing units."
+  },
+
+  "ritual_shield_wall": {
+    id: "ritual_shield_wall",
+    name: "Aegis",
+    type: "RITUAL",
+    minFaction: "solaris",
+    cost: 3,
+    spellData: {
+        type: "buff_area", radius: 3.0, targetTeam: 'ally',
+        buffs: [{ type: 'shield', value: 300, duration: 6.0 }]
+    },
+    description: "Grants a temporary shield to all allies in the area."
+  },
+
+  "sanctum_spikes": {
+    id: "sanctum_spikes",
+    name: "Spike Trap",
+    type: "SANCTUM",
+    minFaction: "neutral",
+    cost: 2,
+    stats: {
+      hp: 400, damage: 0, range: 0.5, speed: 0, movementType: 'none', isBuilding: true,
+      radius: 0.6,
+      traits: {
+          aura: { radius: 1.0, targetTeam: 'enemy', damage: 50, interval: 0.5 }
+      }
+    },
+    description: "Deals damage to enemies walking over it."
+  },
+
+  "ritual_soul_burn": {
+    id: "ritual_soul_burn",
+    name: "Soul Burn",
+    type: "RITUAL",
+    minFaction: "noctis",
+    isTaboo: true,
+    demerit: { type: 'hq_damage', value: 200 },
+    cost: 2,
+    spellData: {
+        type: "damage_aoe", radius: 3.0, damage: 400, targetTeam: 'enemy'
+    },
+    description: "Deals high damage to enemies, but consumes some of your Essence."
+  },
+
+  "vessel_catapult": {
+    id: "vessel_catapult",
+    name: "Siege Catapult",
+    type: "VESSEL",
+    minFaction: "neutral",
+    cost: 6,
+    stats: {
+      hp: 500, damage: 250, range: 9.0, minRange: 3.0, speed: 2.0, attackSpeed: 0.3,
+      deployTime: 3.0, aimTime: 1.0,
+      movementType: 'ground',
+      targetTeam: 'enemy', targetRule: 'building_only',
+      aoeRadius: 1.5, projectileType: 'rock'
+    },
+    description: "Long-range siege weapon effective against buildings."
   }
+
 };

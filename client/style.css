@@ -970,3 +970,182 @@ button:disabled {
   border-radius: 4px;
   margin-left: 5px;
 }
+
+
+/* --- LOBBY SCREEN --- */
+#lobby-screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #050508 url('https://raw.githubusercontent.com/EsotericSoftware/spine-superspine/master/examples/spineboy/assets/spineboy-pro.png') no-repeat center center; /* Placeholder or removing bg image */
+    background: radial-gradient(circle at center, #1a1a20 0%, #000 100%);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lobby-container {
+    width: 90%;
+    max-width: 500px;
+    background: rgba(20, 20, 25, 0.95);
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+
+.lobby-title {
+    font-family: var(--font-title);
+    font-size: 48px;
+    color: var(--gold);
+    margin: 0;
+    letter-spacing: 5px;
+    text-shadow: 0 0 20px var(--gold-dim);
+}
+
+.lobby-subtitle {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: #888;
+    letter-spacing: 3px;
+    margin-bottom: 30px;
+}
+
+.lobby-controls {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+#room-name-input {
+    flex: 1;
+    background: #111;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 10px;
+    font-family: var(--font-body);
+    border-radius: 4px;
+}
+
+.room-list-panel {
+    width: 100%;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 4px;
+    min-height: 200px;
+    display: flex; flex-direction: column;
+}
+
+.room-list-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px;
+    background: #1a1a20;
+    border-bottom: 1px solid #333;
+}
+
+.room-list-header h3 {
+    margin: 0; font-size: 12px; color: #aaa;
+}
+
+#room-list-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    max-height: 300px;
+}
+
+.room-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #222;
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.room-item:hover {
+    background: #2a2a30;
+}
+
+.room-info {
+    display: flex; flex-direction: column;
+}
+
+.room-name {
+    font-family: var(--font-title);
+    font-size: 14px;
+    color: #fff;
+}
+
+.room-stats {
+    font-size: 10px;
+    color: #888;
+}
+
+.btn-gold {
+    background: var(--gold);
+    color: #000;
+    border: none;
+    padding: 10px 20px;
+    font-family: var(--font-title);
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-gold:hover {
+    background: #fff;
+    box-shadow: 0 0 10px var(--gold);
+}
+
+.btn-gold-sm {
+    @extend .btn-gold;
+    padding: 5px 10px;
+    font-size: 10px;
+}
+
+.btn-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #555 !important;
+    color: #aaa !important;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.btn-icon:hover { color: #fff; }
+
+.loading-text {
+    text-align: center;
+    color: #555;
+    font-style: italic;
+    margin-top: 20px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #111; 
+}
+::-webkit-scrollbar-thumb {
+  background: #333; 
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555; 
+}

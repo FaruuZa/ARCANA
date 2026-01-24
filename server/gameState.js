@@ -4,6 +4,7 @@ import { createUnit } from "./entity/unit.js";
 import { SpatialHash } from "./utils/spatialHash.js";
 
 import { CARDS } from "../shared/data/cards.js"; // [NEW] Need CARDS for auto-fill
+import { FACTIONS } from "../shared/data/factions.js"; // [NEW] Faction Stats
 
 // Helper: Acak Array
 function shuffle(array) {
@@ -59,7 +60,7 @@ function createPlayerState(faction) {
 
     // [NEW] Taboo Global Modifiers
     modifiers: {
-        arcanaRate: 1.0,
+        arcanaRate: FACTIONS[faction] ? FACTIONS[faction].arcanaRate : 1.0,
         towerDamage: 1.0,
         towerHp: 1.0
     }
@@ -69,9 +70,12 @@ function createPlayerState(faction) {
 
 
 // Helper: Create Towers
-function createTowers(startId) {
+function createTowers(startId, factions) {
   const towers = [];
   let id = startId;
+
+  const f0 = FACTIONS[factions[0]];
+  const f1 = FACTIONS[factions[1]];
 
   // Team 0 (Bottom)
   // King Tower
@@ -81,10 +85,10 @@ function createTowers(startId) {
     type: 'king',
     col: TOWER_POSITIONS.KING_COL,
     row: TOWER_POSITIONS.KING_ROW_OFFSET,
-    hp: 4000,
-    damage: 20,
-    range: 7.0,
-    radius: 1.5
+    hp: f0.towerStats.king.hp,
+    damage: f0.towerStats.king.damage,
+    range: f0.towerStats.king.range,
+    radius: f0.towerStats.king.radius
   }));
 
   // Side Towers
@@ -94,9 +98,9 @@ function createTowers(startId) {
     type: 'side',
     col: TOWER_POSITIONS.SIDE_LEFT_COL,
     row: TOWER_POSITIONS.SIDE_ROW_OFFSET,
-    hp: 2500,
-    damage: 15,
-    range: 7.5
+    hp: f0.towerStats.side.hp,
+    damage: f0.towerStats.side.damage,
+    range: f0.towerStats.side.range
   }));
   
   towers.push(createBuilding({
@@ -105,9 +109,9 @@ function createTowers(startId) {
     type: 'side',
     col: TOWER_POSITIONS.SIDE_RIGHT_COL,
     row: TOWER_POSITIONS.SIDE_ROW_OFFSET,
-    hp: 2500,
-    damage: 15,
-    range: 7.5
+    hp: f0.towerStats.side.hp,
+    damage: f0.towerStats.side.damage,
+    range: f0.towerStats.side.range
   }));
 
   // Team 1 (Top)
@@ -120,10 +124,10 @@ function createTowers(startId) {
     type: 'king',
     col: TOWER_POSITIONS.KING_COL,
     row: TOP_ROW - TOWER_POSITIONS.KING_ROW_OFFSET,
-    hp: 4000,
-    damage: 20,
-    range: 7.0,
-    radius: 1.5
+    hp: f1.towerStats.king.hp,
+    damage: f1.towerStats.king.damage,
+    range: f1.towerStats.king.range,
+    radius: f1.towerStats.king.radius
   }));
 
   // Side Towers
@@ -133,9 +137,9 @@ function createTowers(startId) {
     type: 'side',
     col: TOWER_POSITIONS.SIDE_LEFT_COL,
     row: TOP_ROW - TOWER_POSITIONS.SIDE_ROW_OFFSET,
-    hp: 2500,
-    damage: 15,
-    range: 7.5
+    hp: f1.towerStats.side.hp,
+    damage: f1.towerStats.side.damage,
+    range: f1.towerStats.side.range
   }));
 
   towers.push(createBuilding({
@@ -144,9 +148,9 @@ function createTowers(startId) {
     type: 'side',
     col: TOWER_POSITIONS.SIDE_RIGHT_COL,
     row: TOP_ROW - TOWER_POSITIONS.SIDE_ROW_OFFSET,
-    hp: 2500,
-    damage: 15,
-    range: 7.5
+    hp: f1.towerStats.side.hp,
+    damage: f1.towerStats.side.damage,
+    range: f1.towerStats.side.range
   }));
 
   return towers;
@@ -154,12 +158,12 @@ function createTowers(startId) {
 
 export function createGameState() {
   const nextId = 1;
-  const towers = createTowers(nextId);
-  
   // [NEW] Random Faction Assignment
   // 50/50 Chance who gets Solaris/Noctis
   const factions = ['solaris', 'noctis'];
   if (Math.random() < 0.5) factions.reverse();
+
+  const towers = createTowers(nextId, factions);
   
   return {
     tick: 0,
@@ -249,4 +253,23 @@ export function spawnUnit(state, data) {
 
     state.units.push(unit);
     return unit;
+}
+
+export function spawnBuilding(state, data) {
+    const building = createBuilding({
+        id: state.nextEntityId++,
+        team: data.team,
+        type: data.type || 'sanctum', // Default type
+        col: data.col,
+        row: data.row,
+        hp: data.hp,
+        damage: data.damage,
+        range: data.range,
+        radius: data.radius,
+        attackSpeed: data.attackSpeed, // [NEW] If buildings can attack
+        traits: data.traits || {}
+    });
+
+    state.buildings.push(building);
+    return building;
 }

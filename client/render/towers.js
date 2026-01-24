@@ -2,6 +2,8 @@ import { gameState } from "../state/gameState.js";
 import { unitToScreen } from "../utils/grid.js";
 import { SOLARIS_THEME } from "./themes/solaris.js";
 import { NOCTIS_THEME } from "./themes/noctis.js";
+import { getUnitTexture } from "./visuals/generator.js"; // [NEW] Use Generator
+import { BLUEPRINTS } from "./visuals/blueprints.js"; // [NEW] Scaling
 
 const towerSprites = new Map();
 let _app, _grid;
@@ -14,20 +16,37 @@ export function initTowers(app, grid) {
   layer.zIndex = 5; // Di bawah unit
   app.stage.addChild(layer);
 
+  let lastBuildings = []; 
+
   gameState.subscribe((state) => {
-    syncTowers(state.buildings, layer);
+    lastBuildings = state.buildings; 
+    syncTowers(state.buildings, layer, state.players);
   });
+  
+  return {
+    resize: () => syncTowers(lastBuildings, layer, gameState.players)
+  };
 }
 
-function syncTowers(buildings, layer) {
+function syncTowers(buildings, layer, players) {
   const activeIds = new Set();
 
   buildings.forEach(b => {
     activeIds.add(b.id);
     let container = towerSprites.get(b.id);
+    
+    const owner = players[b.team];
+    const faction = owner ? owner.faction : (b.team === 0 ? 'solaris' : 'noctis');
+    
+    // Theme change check
+    if (container && container.faction !== faction) {
+        container.destroy();
+        towerSprites.delete(b.id);
+        container = null;
+    }
 
     if (!container) {
-      container = createTowerVisual(b);
+      container = createTowerVisual(b, faction);
       towerSprites.set(b.id, container);
       layer.addChild(container);
     }
@@ -36,10 +55,13 @@ function syncTowers(buildings, layer) {
     container.x = pos.x;
     container.y = pos.y;
 
+    // [FIX] Force Redraw every sync to handle Resize/Grid changes
+    redrawTowerVisual(container, b, faction);
+
     updateTowerHP(container, b);
   });
 
-  // Hapus tower hancur
+  // Cleanup
   for (const [id, container] of towerSprites) {
     if (!activeIds.has(id)) {
       container.destroy();
@@ -48,151 +70,194 @@ function syncTowers(buildings, layer) {
   }
 }
 
-function createTowerVisual(building) {
+function createTowerVisual(building, faction) {
   const container = new PIXI.Container();
-  const isKing = building.type === 'king';
-  const size = isKing ? _grid.cellSize * 1.3 : _grid.cellSize * 0.9;
+  container.faction = faction;
   
   const g = new PIXI.Graphics();
+  g.name = "towerGfx"; // Tag for retrieval
   container.addChild(g);
 
-  // Range Circle (Debug/Helper) - Buat lebih halus/tidak mengganggu
-  const rangeCircle = new PIXI.Graphics();
-  rangeCircle.lineStyle(1, 0xFFFFFF, 0.1); 
-  rangeCircle.drawCircle(0, 0, building.range * _grid.cellSize);
-  container.addChild(rangeCircle);
-
   // HP Bar Base
-  const barW = 40;
-  const barH = 6;
-  const yOffset = -size/1.5 - 20;
-
   const bg = new PIXI.Graphics();
-  bg.beginFill(0x000000, 0.7);
-  bg.drawRect(-barW/2, yOffset, barW, barH);
+  bg.name = "hpBg";
   container.addChild(bg);
 
   const fill = new PIXI.Graphics();
   fill.name = "hpBar";
   container.addChild(fill);
 
-  // Draw Unique Faction Tower
-  const owner = gameState.players[building.team];
-  const faction = owner ? owner.faction : (building.team === 0 ? 'solaris' : 'noctis');
-
-  if (faction === 'solaris') {
-      drawSolarisTower(g, size, isKing);
-  } else {
-      // Default to Noctis for 'noctis' or unknown
-      drawNoctisTower(g, size, isKing);
-  }
+  // [NEW] Sprite for Sanctums
+  const sprite = new PIXI.Sprite();
+  sprite.name = "unitSprite";
+  sprite.anchor.set(0.5);
+  sprite.visible = false;
+  container.addChild(sprite); // Add sprite for blueprint-based buildings
 
   return container;
 }
 
+function redrawTowerVisual(container, building, faction) {
+  const g = container.getChildByName("towerGfx");
+  if (!g) return;
+
+  const isKing = building.type === 'king';
+  // If not king/side, use radius or default to 1 for generic buildings
+  const isStandardTower = (building.type === 'king' || building.type === 'side');
+  let size = isStandardTower ? (isKing ? _grid.cellSize * 1.5 : _grid.cellSize * 1.0) : (_grid.cellSize * (building.radius || 1.0) * 2);
+
+  // Redraw HP Bar Background to match new size
+  const bg = container.getChildByName("hpBg");
+  const sprite = container.getChildByName("unitSprite"); // [NEW]
+  if (bg) {
+      const barW = size;
+      const barH = 6;
+      const yOffset = size/2 + 8;
+      bg.clear();
+      bg.beginFill(0x000000, 0.8);
+      bg.drawRect(-barW/2, yOffset, barW, barH);
+      bg.endFill();
+  }
+
+  // Determine Type
+  if (building.type === 'king' || building.type === 'side') {
+      sprite.visible = false;
+      g.visible = true;
+
+      // Draw Unique Faction Tower
+      if (faction === 'solaris') {
+          drawSolarisTower(g, size, isKing);
+      } else {
+          drawNoctisTower(g, size, isKing);
+      }
+  } else {
+      // SANCTUM / BLUEPRINT BASED
+      g.clear();
+      g.visible = false;
+      sprite.visible = true;
+
+      const texture = getUnitTexture(_app, building.type, faction);
+      if (texture) {
+          sprite.texture = texture;
+          
+          // Scaling Logic similarly to ghost.js
+          const blueprint = BLUEPRINTS[building.type];
+          if (blueprint) {
+              const baseScale = blueprint.scale || 1.0;
+              // visual generator uses r=20 -> ~40px size
+              const textureSize = 44; 
+              // We want to match grid.cellSize * baseScale?
+              // Or specific radius? 
+              // Standard unit scale in ghost.js:
+              // const targetPixelSize = (unitRadius * 2) * _grid.cellSize;
+              // let scaleVal = targetPixelSize / baseTextureSize;
+              
+              // Let's use building.radius if available or default
+              const radius = building.radius || 1.0;
+              const targetSize = (radius * 2) * _grid.cellSize * (baseScale); // multiply baseScale for visual flair
+              
+              sprite.width = targetSize;
+              sprite.height = targetSize;
+          } else {
+              sprite.width = _grid.cellSize;
+              sprite.height = _grid.cellSize;
+          }
+      }
+  }
+}
+
 function drawSolarisTower(g, size, isKing) {
     const theme = SOLARIS_THEME.towers;
-    const w = size * 0.6; // Width of tower
-    const h = size; // Height
+    const w = size * (isKing ? 0.7 : 0.5); 
+    const isBottom = false; // logic visual not dependant on position
 
     g.clear();
 
-    // 0. Drop Shadow (Contrast against light map)
+    // -- SHADOW --
     g.beginFill(0x000000, 0.3);
-    if (isKing) {
-        drawHexagon(g, 4, 4, w);
-    } else {
-        g.drawCircle(3, 3, w/2);
-    }
+    g.drawEllipse(0, size/3, w, w/3);
     g.endFill();
 
-    // 1. Base Pillar (White Marble)
+    // -- BASE --
+    // White Marble Cylinder
     g.beginFill(theme.secondary); 
-    if (isKing) {
-        // Hexagon Base
-        drawHexagon(g, 0, 0, w);
-    } else {
-        // Circle/Cylinder Base
-        g.drawCircle(0, 0, w/2);
-    }
-    g.endFill();
-
-    // 2. Gold Accents (Corner Pillars or Rings)
-    g.beginFill(theme.base);
-    if (isKing) {
-        g.drawRect(-w/2, -h/2, 5, h); // Left Pillar
-        g.drawRect(w/2 - 5, -h/2, 5, h); // Right Pillar
-        g.drawRect(-w/2, -h/2, w, 5); // Top Beam
-    } else {
-        g.drawCircle(0, 0, w/2 - 5); // Inner Gold Ring
-    }
-    g.endFill();
-
-    // 3. Energy Core (Blue/Cyan)
-    g.beginFill(theme.detail);
-    if (isKing) {
-        g.drawCircle(0, 0, w/3);
-    } else {
-        // Crystal Floating (Diamond Shape instead of Box)
-        const dSize = 7;
-        g.drawPolygon([
-            0, -dSize,
-            dSize, 0,
-            0, dSize,
-            -dSize, 0
-        ]);
-    }
+    g.drawRect(-w/2, -size/2, w, size);
     g.endFill();
     
+    // -- GOLD TRIM --
+    g.beginFill(theme.base);
+    // Base Ring
+    g.drawRect(-w*0.6, size/2 - 5, w*1.2, 5);
+    // Top Ring
+    g.drawRect(-w*0.6, -size/2, w*1.2, 5);
+    // Vertical Stripe
+    g.drawRect(-2, -size/2, 4, size);
+    g.endFill();
+
+    // -- CORE --
+    g.beginFill(theme.detail); // Blue
     if (isKing) {
-        // Sun Halo
-        g.lineStyle(2, 0xFFD700, 0.8);
-        g.drawCircle(0, 0, w * 1.2);
+        // Large Sun Sphere
+        g.drawCircle(0, -size/2 - 10, w * 0.8);
+        
+        // Rays
+        g.lineStyle(2, theme.base);
+        for(let i=0; i<8; i++) {
+            const ang = (Math.PI*2/8) * i;
+            const r1 = w * 0.8;
+            const r2 = w * 1.2;
+            g.moveTo(Math.cos(ang)*r1, -size/2 - 10 + Math.sin(ang)*r1);
+            g.lineTo(Math.cos(ang)*r2, -size/2 - 10 + Math.sin(ang)*r2);
+        }
+        g.lineStyle(0);
+    } else {
+        // Floating Crystal
+        const d = w * 0.6;
+        g.drawRect(-d/2, -size/2 - d - 5, d, d); // Diamond rotated?
     }
+    g.endFill();
 }
 
 function drawNoctisTower(g, size, isKing) {
     const theme = NOCTIS_THEME.towers;
-    const w = size * 0.7;
+    const w = size * (isKing ? 0.7 : 0.5);
 
     g.clear();
 
-    // 1. Base (Dark Obsidian/Purple)
-    g.beginFill(theme.secondary);
-    if (isKing) {
-        // Spiky Fortress Base
-        const path = [
-            -w, 0,
-            -w/2, -w,
-            0, -w/2,
-            w/2, -w,
-            w, 0,
-            0, w/2
-        ];
-        g.drawPolygon(path);
-    } else {
-        // Twisted Shard
-        const path = [
-            -w/2, w/2,
-            w/2, w/2,
-            0, -w/2
-        ];
-        g.drawPolygon(path);
-    }
+    // -- SHADOW --
+    g.beginFill(0x000000, 0.3);
+    g.drawEllipse(0, size/3, w, w/3);
     g.endFill();
 
-    // 2. Veins/Cracks (Glow)
+    // -- STRUCTURE --
+    // Spiky Obsidian Shard
+    g.beginFill(theme.secondary);
+    g.drawPolygon([
+        -w/2, size/2,   // Bottom Left
+        w/2, size/2,    // Bottom Right
+        w/4, -size/4,   // Mid Right
+        0, -size/2,     // Top Tip
+        -w/4, -size/4   // Mid Left
+    ]);
+    g.endFill();
+
+    // -- GLOWING VEINS --
     g.lineStyle(2, theme.detail);
-    g.moveTo(0, 0);
-    g.lineTo(0, -w/2);
-    if (isKing) {
-        g.moveTo(-w/2, 0); g.lineTo(w/2, 0);
-    }
+    g.moveTo(0, size/2);
+    g.lineTo(0, -size/2);
     g.lineStyle(0);
 
-    // 3. Top Crystal/Eye
-    g.beginFill(theme.base); // Purple
-    g.drawCircle(0, -10, isKing ? 12 : 6);
+    // -- CRYSTAL / EYE --
+    g.beginFill(theme.base);
+    if (isKing) {
+        // Eye of Sauron style
+        g.drawEllipse(0, -size/2 - 10, w/1.5, w/3);
+        g.beginFill(theme.detail);
+        g.drawCircle(0, -size/2 - 10, 3);
+    } else {
+        // Floating Orb
+        g.drawCircle(0, -size/2 - 8, w/3);
+    }
     g.endFill();
 }
 
@@ -211,11 +276,12 @@ function updateTowerHP(container, building) {
   if (!barFill) return;
 
   const pct = Math.max(0, building.hp / building.maxHp);
-  const barW = 40;
-  const barH = 6;
   const isKing = building.type === 'king';
-  const size = isKing ? _grid.cellSize * 1.3 : _grid.cellSize * 0.9;
-  const yOffset = -size/1.5 - 20;
+  const size = isKing ? _grid.cellSize * 1.5 : _grid.cellSize * 1.0;
+  
+  const barW = size;
+  const barH = 6;
+  const yOffset = size/2 + 8;
 
   barFill.clear();
   
@@ -225,6 +291,6 @@ function updateTowerHP(container, building) {
   if (pct < 0.25) color = 0xFF0000;
 
   barFill.beginFill(color);
-  barFill.drawRect(-barW/2 + 1, yOffset + 1, (barW - 2) * pct, barH - 2);
+  barFill.drawRect(-barW/2, yOffset, barW * pct, barH);
   barFill.endFill();
 }

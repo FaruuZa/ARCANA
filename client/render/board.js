@@ -48,10 +48,10 @@ export function initBoard(app, grid) {
   // Gambar awal
   drawFullBoard(app, grid);
 
-  // Handle Resize (Opsional, tapi bagus untuk environment)
-  window.addEventListener('resize', () => {
-      drawFullBoard(app, grid);
-  });
+  // Return API
+  return {
+    resize: () => drawFullBoard(app, grid)
+  };
 }
 
 function drawFullBoard(app, grid) {

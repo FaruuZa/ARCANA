@@ -18,12 +18,11 @@ export const CARDS = {
     description: "A heavily armored soldier who holds the line against any tide."
   },
   
-  // 2. SOLARIS RANGER
   "vessel_02": {
     id: "vessel_02",
-    name: "Sun Ranger",
+    name: "twin Ranger",
     type: "VESSEL",
-    minFaction: "solaris",
+    minFaction: "neutral",
     cost: 4,
     stats: {
       hp: 140, damage: 45, range: 5.0, sightRange: 7.0, speed: 5.0, attackSpeed: 1.3,
@@ -32,7 +31,7 @@ export const CARDS = {
       targetTeam: 'enemy',
       targetRule: 'any',
       targetHeight: 'both',
-      projectileType: 'arrow_solaris'
+      projectileType: 'arrow'
     },
     description: "Elite archers who rain piercing light upon the unworthy."
   },
@@ -186,11 +185,11 @@ export const CARDS = {
     minFaction: "noctis",
     cost: 4,
     stats: {
-      hp: 100, damage: 100, range: 1.0, sightRange: 7.0, speed: 5.0, attackSpeed: 0.8,
+      hp: 100, damage: 150, range: 1.0, sightRange: 7.0, speed: 5.0, attackSpeed: 0.8,
       deployTime: 1.0, aimTime: 0.2,
       movementType: 'ground',
       traits: {
-        jump: { enabled: true, range: 10.0, minRange: 4, cooldown: 8.0, speed: 30.0, aoeRadius: 1.5, damage: 200, windup: 1, priority: 'farthest' }
+        jump: { enabled: true, range: 10.0, minRange: 4, cooldown: 8.0, speed: 30.0, aoeRadius: 1.5, damage: 300, windup: 1, priority: 'farthest' }
       }
     }
   },
@@ -236,7 +235,7 @@ export const CARDS = {
     minFaction: "neutral",
     cost: 5,
     stats: {
-      hp: 800, damage: 10, range: 1.0, sightRange: 5.0, speed: 3.0, attackSpeed: 0.7,
+      hp: 800, damage: 50, range: 1.0, sightRange: 5.0, speed: 2.5, attackSpeed: 0.7,
       deployTime: 1.5, aimTime: 0.4,
       movementType: 'ground',
       targetTeam: 'enemy', targetRule: 'any', targetHeight: 'ground',
@@ -256,8 +255,8 @@ export const CARDS = {
       radius: 3.5,
       targetTeam: 'ally',
       buffs: [
-        { type: 'speed_mult', value: 1.5, duration: 5.0 },
-        { type: 'attack_speed_mult', value: 1.4, duration: 5.0 }
+        { type: 'speed_mult', value: 2, duration: 5.0 },
+        { type: 'attack_speed_mult', value: 1.8, duration: 5.0 }
       ]
     }
   },
@@ -271,7 +270,7 @@ export const CARDS = {
     cost: 3,
     spellData: {
       type: "buff_area", radius: 3.0, targetTeam: 'enemy',
-      buffs: [ { type: 'root', value: 1, duration: 4.0 } ]
+      buffs: [ { type: 'root', value: 1, duration: 5.0 } ]
     }
   },
 
@@ -283,7 +282,7 @@ export const CARDS = {
     minFaction: "noctis",
     cost: 4,
     stats: {
-      hp: 350, damage: 45, range: 5.5, sightRange: 7.0, speed: 4.5, attackSpeed: 1.1,
+      hp: 350, damage: 45, range: 5.5, sightRange: 7.0, speed: 4.0, attackSpeed: 1.1,
       deployTime: 1.0, aimTime: 0.2,
       movementType: 'ground',
       targetTeam: 'enemy', targetRule: 'any', targetHeight: 'both',
@@ -302,9 +301,9 @@ export const CARDS = {
     spellData: {
       type: "single_target", targetTeam: 'ally',
       buffs: [
-        { type: 'scale_mult', value: 2, duration: 20.0 },
+        { type: 'scale_mult', value: 2.2, duration: 20.0 },
         { type: 'damage_mult', value: 2, duration: 20.0 },
-        { type: 'speed_mult', value: 0.5, duration: 20.0 }
+        { type: 'speed_mult', value: 0.4, duration: 20.0 }
       ]
     }
   },
@@ -329,14 +328,14 @@ export const CARDS = {
     type: "VESSEL",
     minFaction: "neutral",
     isTaboo: true, // [NEW] Taboo Unit
-    cost: 6,
+    cost: 7,
     stats: {
-      hp: 2000, damage: 100, range: 1.0, speed: 2.0, radius: 0.6,
+      hp: 1700, damage: 50, range: 1.0, speed: 1.5, radius: 0.8,
       traits: { 
-          // [NEW] Friendly Fire Spawn (Fall Damage?)
-          onSpawn: { type: 'damage_aoe', radius: 2.5, damage: 150, targetTeam: 'all' },
-          // [NEW] Friendly Fire Death (Big Bomb)
-          onDeath: { type: 'damage_aoe', radius: 4.0, damage: 1000, delay: 2.0, targetTeam: 'all' } 
+          // Friendly Fire Spawn (Fall Damage?)
+          onSpawn: { type: 'damage_aoe', radius: 2.0, damage: 200, targetTeam: 'all' },
+          // Friendly Fire Death (Big Bomb)
+          onDeath: { type: 'damage_aoe', radius: 3.5, damage: 1000, delay: 2.0, targetTeam: 'all' } 
       }
     },
     description: "Massive unit that damages EVERYONE nearby when landing and dying."
@@ -351,7 +350,10 @@ export const CARDS = {
     cost: 4,
     stats: {
       hp: 600, damage: 90, range: 4.0, speed: 3.0,
-      traits: { onSpawn: { type: 'damage_aoe', radius: 2.0, damage: 150, buffs: [{ type: 'stun', duration: 0.5 }] } }
+      traits: { 
+        onSpawn: { type: 'damage_aoe', radius: 2.0, damage: 150, buffs: [{ type: 'stun', duration: 0.5 }] },
+        stunOnHit: true, stunDuration: 0.4
+      }
     }
   },
 
@@ -382,8 +384,8 @@ export const CARDS = {
     minFaction: "noctis",
     cost: 4,
     spellData: {
-      type: "zone_lingering", radius: 3.5, duration: 5.0, interval: 0.5, damage: 40, targetTeam: 'enemy',
-      buffs: [ { type: 'speed_mult', value: 0.7, duration: 1.0 } ]
+      type: "zone_lingering", radius: 3.5, duration: 7.0, interval: 0.3, damage: 20, targetTeam: 'enemy',
+      buffs: [ { type: 'speed_mult', value: 0.9, duration: 1.0 } ]
     }
   },
 
@@ -396,7 +398,7 @@ export const CARDS = {
     cost: 3,
     spellData: {
       type: "zone_lingering", radius: 3.0, duration: 6.0, interval: 1.0, damage: 0, targetTeam: 'ally',
-      buffs: [ { type: 'regen', value: 50, duration: 0.2 } ]
+      buffs: [ { type: 'regen', value: 70, duration: 0.2 } ]
     }
   },
 
@@ -411,8 +413,8 @@ export const CARDS = {
   "ritual_frost_nova": {
     id: "ritual_frost_nova", name: "Frost Nova", type: "RITUAL", minFaction: "neutral", cost: 4,
     spellData: { 
-        type: "damage_aoe", damage: 50, radius: 2.5, delay: 0.2, // Fast pop
-        buffs: [{ type: 'stun', duration: 2.0 }]
+        type: "damage_aoe", damage: 70, radius: 2.5, delay: 0.2, // Fast pop
+        buffs: [{ type: 'stun', duration: 2.5 }]
     },
     description: "Freezes enemies in a large area."
   },
@@ -420,7 +422,7 @@ export const CARDS = {
   // [NEW] METEOR (High Dmg, Long Delay)
   "ritual_meteor": {
     id: "ritual_meteor", name: "Meteor", type: "RITUAL", minFaction: "noctis", cost: 6,
-    spellData: { type: "damage_aoe", damage: 800, radius: 2.0, delay: 2.5 },
+    spellData: { type: "damage_aoe", damage: 800, radius: 2.5, delay: 3 },
     description: "Deals massive damage after a significant delay."
   },
 
@@ -446,7 +448,8 @@ export const CARDS = {
         buffs: [
             { type: 'damage_mult', value: 2.0, duration: 8.0 },
             { type: 'attack_speed_mult', value: 2.0, duration: 8.0 },
-            { type: 'speed_mult', value: 1.5, duration: 8.0 }
+            { type: 'speed_mult', value: 1.5, duration: 8.0 },
+            { type: 'poison', value: 30, duration: 8.0 }
         ]
     },
     description: "Greatly boosts a unit's combat stats."
@@ -489,7 +492,7 @@ export const CARDS = {
     isTaboo: true,
     cost: 4, // Increased Cost
     stats: {
-      hp: 1100, damage: 160, range: 1.5, sightRange: 6.0, speed: 4.0, attackSpeed: 0.8,
+      hp: 1100, damage: 200, range: 1.5, sightRange: 6.0, speed: 4.0, attackSpeed: 0.8,
       deployTime: 1.0, aimTime: 0.4,
       movementType: 'ground',
       targetTeam: 'all', 

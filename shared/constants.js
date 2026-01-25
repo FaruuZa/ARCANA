@@ -43,5 +43,5 @@ export const BUILDING_RADIUS = 1.0;
 // --- DECK BUILDING ---
 export const DECK_SIZE = 10;
 export const HAND_SIZE = 5;
-export const PREP_DURATION = 0; // 60s
-export const MAX_TABOO_CARDS = 1; // Opsional limit
+export const PREP_DURATION = 60; // 60s
+export const MAX_TABOO_CARDS = 2; // Opsional limit

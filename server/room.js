@@ -283,7 +283,7 @@ export class Room {
             success = playUnitCard(this.gameState, teamId, data.cardId, data.col, data.row);
         }
         
-        // if (!success) socket.emit("error", "Invalid spawn");
+        if (!success) socket.emit("error", "Invalid spawn");
     }
 
     castRitual(teamId, data, socket) {

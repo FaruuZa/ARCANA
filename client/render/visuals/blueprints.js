@@ -33,13 +33,21 @@ export const BLUEPRINTS = {
   'vessel_sun_guardian': { body: 'armor_plate', head: 'helmet_full', weapon: 'sword', scale: 1.2 },
   'vessel_dawn_breaker': { body: 'armor_heavy', head: 'helmet_viking', weapon: 'hammer', scale: 1.1 },
   'vessel_radiant_wisp': { body: 'robe', head: 'hood', weapon: 'none', scale: 0.7 },
-  
+
   'vessel_night_shade': { body: 'frame_shadow', head: 'mask_hood', weapon: 'dagger', scale: 0.8 },
   'vessel_void_walker': { body: 'armor_heavy', head: 'mask_void', weapon: 'fist_rock', scale: 1.1 },
   'vessel_void_ray': { body: 'machine_tank', head: 'head_cyclops', weapon: 'magic_zap', scale: 1.0 },
-  
+
   'vessel_catapult': { body: 'machine_tank', head: 'helmet_viking', weapon: 'hammer', scale: 1.3 },
   'vessel_traitor': { body: 'armor_heavy', head: 'skull_helm', weapon: 'sword', scale: 1.2 },
+
+  // === MORTIS ===
+  'vessel_skeleton_king': { body: 'ribs_armor', head: 'crown_gold', weapon: 'axe_double', scale: 1.3 },
+  'vessel_grave_keeper': { body: 'robe_dark', head: 'hood', weapon: 'staff', scale: 1.0 },
+
+  // === CHRONIS ===
+  'vessel_chrono_mage': { body: 'robe', head: 'hat_wizard', weapon: 'staff', scale: 1.0 },
+  'vessel_time_walker': { body: 'armor_plate', head: 'hood_ninja', weapon: 'dagger', scale: 1.1 },
 
   // === TOWERS ===
   'tower_king': { body: 'armor_heavy', head: 'crown_gold', weapon: 'none', scale: 1.5 },

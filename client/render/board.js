@@ -1,12 +1,14 @@
 import { BRIDGE_COLUMNS } from "../../shared/constants.js";
 import { SOLARIS_THEME } from "./themes/solaris.js";
 import { NOCTIS_THEME } from "./themes/noctis.js";
+import { MORTIS_THEME } from "./themes/mortis.js";   // [NEW]
+import { CHRONIS_THEME } from "./themes/chronis.js"; // [NEW]
 import { gameState, myTeamId } from "../state/gameState.js"; // Import State & ID
 
 let boardContainer = null;
 let envGraphics = null;
 let boardGraphics = null;
-let lastDrawnTeam = -999; 
+let lastDrawnTeam = -999;
 
 export function initBoard(app, grid) {
   // Container utama
@@ -31,13 +33,13 @@ export function initBoard(app, grid) {
     // Generate signature state (TeamID + Faction0 + Faction1)
     const p0 = gameState.players[0];
     const p1 = gameState.players[1];
-    
+
     // Safety check
     const f0 = p0 ? p0.faction : "loading";
     const f1 = p1 ? p1.faction : "loading";
-    
+
     const currentSignature = `${myTeamId}:${f0}:${f1}`;
-    
+
     // Jika ada yang berubah (termasuk kita baru login, atau faksi lawan terungkap), redraw!
     if (currentSignature !== lastSignature) {
       drawFullBoard(app, grid);
@@ -59,11 +61,11 @@ function drawFullBoard(app, grid) {
 
   const currentTeam = myTeamId === -999 ? 0 : myTeamId; // Default to Solaris logic if indeterminate
   const isSpectator = myTeamId === -999;
-  
+
   // --- LOGIC TEMA DINAMIS ---
   // Default (Fallback): Team 0 = Solaris, Team 1 = Noctis
   // Tapi kita cek data asli dari gameState.players jika ada
-  
+
   const p0 = gameState.players[0];
   const p1 = gameState.players[1];
 
@@ -71,8 +73,10 @@ function drawFullBoard(app, grid) {
   const faction1 = p1 ? p1.faction : 'noctis';
 
   const themeMap = {
-      'solaris': SOLARIS_THEME,
-      'noctis': NOCTIS_THEME
+    'solaris': SOLARIS_THEME,
+    'noctis': NOCTIS_THEME,
+    'mortis': MORTIS_THEME,   // [NEW]
+    'chronis': CHRONIS_THEME  // [NEW]
   };
 
   // Tentukan tema asli masing-masing tim
@@ -91,7 +95,7 @@ function drawFullBoard(app, grid) {
   // --- 1. DRAW ENVIRONMENT (Background Layar) ---
   const gEnv = envGraphics;
   gEnv.clear();
-  
+
   const screenW = app.screen.width;
   const screenH = app.screen.height;
   const midScreenY = screenH / 2;
@@ -116,7 +120,7 @@ function drawFullBoard(app, grid) {
 
   // Background Board (Sedikit lebih gelap/terang dari environment untuk kontras)
   // Atas
-  g.beginFill(topTheme.board.background); 
+  g.beginFill(topTheme.board.background);
   g.drawRect(grid.offsetX, grid.offsetY, grid.boardWidth, grid.boardHeight / 2);
   g.endFill();
 
@@ -129,69 +133,69 @@ function drawFullBoard(app, grid) {
   // Solaris: Marble Grid effect?
   // Noctis: Subtle cracks? 
   // Kita buat simple overlay saja untuk sekarang
-  
+
   // --- 3. SUNGAI (RIVER) - NEUTRAL GATEWAY ---
   const riverHeight = 2 * grid.cellSize;
-  const riverY = midBoardY - grid.cellSize; 
-  
+  const riverY = midBoardY - grid.cellSize;
+
   // Single Neutral River Color (Dark Grey/Void/Abyss representing the boundary)
   // Or maybe a glowing mystical stream?
   // Let's go with a deep neutral slate grey to separate the factions.
   const neutralRiverColor = 0x2c3e50; // Dark Slate Blue
-  
+
   g.beginFill(neutralRiverColor);
   g.drawRect(grid.offsetX, riverY, grid.boardWidth, riverHeight);
   g.endFill();
 
   // --- 4. JEMBATAN (BRIDGES) - NEUTRAL GATEWAY ---
   // No outlines, unified structure.
-  
+
   const bridgeColor = 0x95a5a6; // Concrete/Grey Stone
-  
+
   BRIDGE_COLUMNS.forEach(colIndex => {
     const centerX = grid.offsetX + (colIndex * grid.cellSize) + (grid.cellSize / 2);
-    const bridgeWidth = grid.cellSize * 2.8; 
-    
+    const bridgeWidth = grid.cellSize * 2.8;
+
     // Single Block Bridge
     g.beginFill(bridgeColor);
-    g.drawRect(centerX - (bridgeWidth/2), riverY, bridgeWidth, riverHeight);
+    g.drawRect(centerX - (bridgeWidth / 2), riverY, bridgeWidth, riverHeight);
     g.endFill();
-    
+
     // Optional: Subtle "Road" or "Path" texture/color in the middle to look like a walkway, 
     // but user asked for no outlines. Simple is better based on request.
   });
 
   // --- 5. GRID LINES (Minimalis) ---
   const lineAlpha = 0.05; // Sangat tipis/samar
-  
+
   // Grid Atas
   g.lineStyle(1, topTheme.board.laneLine, lineAlpha);
-  drawGridLines(g, grid.offsetX, grid.offsetY, grid.boardWidth, grid.boardHeight/2, grid.cellSize);
-  
+  drawGridLines(g, grid.offsetX, grid.offsetY, grid.boardWidth, grid.boardHeight / 2, grid.cellSize);
+
   // Grid Bawah
   g.lineStyle(1, bottomTheme.board.laneLine, lineAlpha);
-  drawGridLines(g, grid.offsetX, midBoardY, grid.boardWidth, grid.boardHeight/2, grid.cellSize);
+  drawGridLines(g, grid.offsetX, midBoardY, grid.boardWidth, grid.boardHeight / 2, grid.cellSize);
 
   // Border Luar Board (Tebal) - Revised to be Open in the Middle
   const borderThick = 4;
-  
+
   // Atas (U-shape terbalik: Kiri - Atas - Kanan)
   g.lineStyle(borderThick, topTheme.board.laneLine, 0.8);
   // Kiri
-  g.moveTo(grid.offsetX, grid.offsetY + grid.boardHeight/2);
+  g.moveTo(grid.offsetX, grid.offsetY + grid.boardHeight / 2);
   g.lineTo(grid.offsetX, grid.offsetY);
   // Atas
   g.lineTo(grid.offsetX + grid.boardWidth, grid.offsetY);
   // Kanan
-  g.lineTo(grid.offsetX + grid.boardWidth, grid.offsetY + grid.boardHeight/2);
+  g.lineTo(grid.offsetX + grid.boardWidth, grid.offsetY + grid.boardHeight / 2);
 
   // Bawah (U-shape: Kiri - Bawah - Kanan)
   g.lineStyle(borderThick, bottomTheme.board.laneLine, 0.8);
   // Kiri
   g.moveTo(grid.offsetX, midBoardY);
-  g.lineTo(grid.offsetX, midBoardY + grid.boardHeight/2);
+  g.lineTo(grid.offsetX, midBoardY + grid.boardHeight / 2);
   // Bawah
-  g.lineTo(grid.offsetX + grid.boardWidth, midBoardY + grid.boardHeight/2);
+  g.lineTo(grid.offsetX + grid.boardWidth, midBoardY + grid.boardHeight / 2);
   // Kanan
   g.lineTo(grid.offsetX + grid.boardWidth, midBoardY);
 }

@@ -28,7 +28,7 @@ export const OMENS = {
         type: "buff_global",
         target: "damage",
         value: 1.25,
-        weight: 5 // Uncommon
+        weight: 10 // Uncommon
     },
     "sluggish_waters": {
         id: "sluggish_waters",
@@ -54,10 +54,28 @@ export const OMENS = {
         id: "global_silence",
         name: "Hushed Valley",
         description: "All units are Silenced (cannot use abilities).",
-        type: "buff_global", 
+        type: "buff_global",
         target: "silence",
         value: 1,
-        weight: 1 // Rare
+        weight: 3 // Rare
+    },
+    "global_poison": {
+        id: "global_poison",
+        name: "Toxic Mist",
+        description: "All units take 20 damage per second.",
+        type: "debuff_global",
+        target: "poison",
+        value: 10, // 10 per tick (0.5s) = 20 DPS
+        weight: 3
+    },
+    "chaos_swap": {
+        id: "chaos_swap",
+        name: "Trickster's Gambit",
+        description: "Factions and Decks are SWAPPED between players!",
+        type: "special",
+        target: "swap",
+        value: 1,
+        weight: 1 // Very Rare/Chaos
     }
 };
 

@@ -15,7 +15,7 @@ export function initEffects(app, grid) {
   gameState.subscribe((state) => {
     // 1. Sync Standard Effects
     if (state.effects) syncEffects(state.effects, layer);
-    
+
     // 2. [NEW] Sync Delayed Spells (Pending Circle)
     // We treat them as temporary effects or handle separate? 
     // Let's add them to the SAME layer but managed by syncPendingSpells
@@ -40,37 +40,37 @@ export function syncEffects(effects, layer) {
 
     // UPDATE ANIMASI
     const pct = ef.time / ef.duration; // 1.0 -> 0.0 (Mundur)
-    
+
     // Posisi
     const pos = unitToScreen(ef, _grid);
     gfx.x = pos.x;
     gfx.y = pos.y;
-    
+
     // ANIMASI BERDASARKAN TIPE
     if (ef.type === 'explosion') {
-        gfx.alpha = pct; 
-        const scale = 1 + (1 - pct); 
-        gfx.scale.set(scale);
-    } 
+      gfx.alpha = pct;
+      const scale = 1 + (1 - pct);
+      gfx.scale.set(scale);
+    }
     else if (ef.type === 'spin') {
-        // Efek Valkyrie: Muter + Fade Out
-        gfx.alpha = pct;
-        gfx.rotation += 0.5; // Muter visualnya
+      // Efek Valkyrie: Muter + Fade Out
+      gfx.alpha = pct;
+      gfx.rotation += 0.5; // Muter visualnya
     }
     else if (ef.type === 'shockwave') {
-        // Efek Slam: Cepat hilang
-        gfx.alpha = pct;
-        const scale = 0.5 + (1 - pct) * 0.5; // Dari kecil membesar dikit
-        gfx.scale.set(scale);
+      // Efek Slam: Cepat hilang
+      gfx.alpha = pct;
+      const scale = 0.5 + (1 - pct) * 0.5; // Dari kecil membesar dikit
+      gfx.scale.set(scale);
     }
     // [NEW] Lightning Animation (Flash)
     else if (ef.type === 'lightning_strike') {
-        gfx.alpha = (pct > 0.5) ? 1 : 0.5; // Flicker
+      gfx.alpha = (pct > 0.5) ? 1 : 0.5; // Flicker
     }
     // [NEW] Buff Animation (Rise Up)
     else if (ef.type === 'buff_shine') {
-        gfx.y -= (1 - pct) * 50; // Naik ke atas
-        gfx.alpha = pct;
+      gfx.y -= (1 - pct) * 50; // Naik ke atas
+      gfx.alpha = pct;
     }
   });
 
@@ -89,7 +89,7 @@ function createEffectVisual(ef) {
 
   if (ef.type === "explosion") {
     // [LAMA] Ledakan Api (Bomber/Ritual)
-    gfx.beginFill(ef.color || 0xFF4500, 0.6); 
+    gfx.beginFill(ef.color || 0xFF4500, 0.6);
     gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
     gfx.endFill();
     gfx.lineStyle(4, 0xFFFF00, 1);
@@ -99,10 +99,10 @@ function createEffectVisual(ef) {
     // [BARU] Efek Putaran Valkyrie (Lingkaran angin/tebasan)
     // Warna Cyan Terang DEFAULT, atau Custom
     const c = ef.color || 0x00FFFF;
-    
+
     gfx.lineStyle(4, c, 0.8);
     gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
-    
+
     // Isi sedikit transparan
     gfx.beginFill(c, 0.2);
     gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
@@ -119,11 +119,11 @@ function createEffectVisual(ef) {
     const c = ef.color || 0xFFFFFF;
     gfx.lineStyle(3, c, 1); // Ring Putih/Custom
     gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
-    
+
     if (ef.color) {
-        gfx.beginFill(c, 0.2);
-        gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
-        gfx.endFill();
+      gfx.beginFill(c, 0.2);
+      gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
+      gfx.endFill();
     }
   }
   // [NEW] Visual Lightning
@@ -131,13 +131,13 @@ function createEffectVisual(ef) {
     gfx.lineStyle(4, 0x00FFFF, 1); // Cyan Lightning
     gfx.moveTo(0, -600); // Start from sky
     gfx.lineTo(0, 0);   // Strike target
-    
+
     // Opsional: Cabang petir
     gfx.lineStyle(2, 0xFFFFFF, 0.8);
     gfx.moveTo(0, -300);
     gfx.lineTo(30, -150);
     gfx.lineTo(0, 0); // ZigZag
-    
+
     // Impact Flash
     gfx.beginFill(0xFFFFFF);
     gfx.drawCircle(0, 0, 20);
@@ -160,10 +160,10 @@ function createEffectVisual(ef) {
   // [NEW] Healing Ward (Zone)
   else if (ef.type === "circle_zone" && !ef.damage) {
     gfx.lineStyle(2, 0xFFFF00, 0.8);
-    gfx.beginFill(0xFFFF00, 0.1); 
+    gfx.beginFill(0xFFFF00, 0.1);
     gfx.drawCircle(0, 0, ef.radius * _grid.cellSize);
     gfx.endFill();
-    
+
     // Cross Icon
     gfx.lineStyle(4, 0x00FF00, 1);
     gfx.moveTo(-10, 0); gfx.lineTo(10, 0);
@@ -175,70 +175,138 @@ function createEffectVisual(ef) {
 
 // Helper Draw Star
 function drawStar(g, x, y, points, outer, inner) {
-    g.moveTo(x, y - outer);
-    const step = Math.PI / points;
-    for (let i = 0; i < 2 * points; i++) {
-        const r = (i % 2 === 0) ? outer : inner;
-        const a = Math.PI / 2 + i * step; // Start at top
-        // Note: PIXI rotation is clockwise from right, so simple trig:
-        // x = cos(angle), y = sin(angle)
-        // But we want start top (angle - PI/2 if 0 is right)
-        // Let's use standard star formula logic
-        const angle = i * step;
-        // Rotate -90 deg (top start)
-        const rot = -Math.PI / 2;
-        
-        g.lineTo(
-            x + Math.cos(angle + rot) * r,
-            y + Math.sin(angle + rot) * r
-        );
-    }
-    g.closePath();
+  g.moveTo(x, y - outer);
+  const step = Math.PI / points;
+  for (let i = 0; i < 2 * points; i++) {
+    const r = (i % 2 === 0) ? outer : inner;
+    const a = Math.PI / 2 + i * step; // Start at top
+    // Note: PIXI rotation is clockwise from right, so simple trig:
+    // x = cos(angle), y = sin(angle)
+    // But we want start top (angle - PI/2 if 0 is right)
+    // Let's use standard star formula logic
+    const angle = i * step;
+    // Rotate -90 deg (top start)
+    const rot = -Math.PI / 2;
+
+    g.lineTo(
+      x + Math.cos(angle + rot) * r,
+      y + Math.sin(angle + rot) * r
+    );
+  }
+  g.closePath();
 }
 
 const pendingSprites = new Map(); // [NEW] Map for Delayed Spells
 
 function syncPendingSpells(delayedSpells, layer) {
-    const activeIds = new Set(delayedSpells.map(ds => ds.id));
+  const activeIds = new Set(delayedSpells.map(ds => ds.id));
 
-    // Cleanup
-    for (const [id, gfx] of pendingSprites) {
-        if (!activeIds.has(id)) {
-            gfx.destroy();
-            pendingSprites.delete(id);
-        }
+  // Cleanup
+  for (const [id, gfx] of pendingSprites) {
+    if (!activeIds.has(id)) {
+      gfx.destroy();
+      pendingSprites.delete(id);
+    }
+  }
+
+  // Update / Create
+  delayedSpells.forEach(ds => {
+    let gfx = pendingSprites.get(ds.id);
+    if (!gfx) {
+      // Visualize Pending Spell (Circle on Ground)
+      gfx = new PIXI.Graphics();
+      pendingSprites.set(ds.id, gfx);
+      layer.addChild(gfx);
     }
 
-    // Update / Create
-    delayedSpells.forEach(ds => {
-        let gfx = pendingSprites.get(ds.id);
-        if (!gfx) {
-            // Visualize Pending Spell (Circle on Ground)
-            gfx = new PIXI.Graphics();
-            pendingSprites.set(ds.id, gfx);
-            layer.addChild(gfx);
-        }
+    // Draw Logic (Dynamic Timer)
+    gfx.clear();
 
-        // Draw Logic (Dynamic Timer)
-        gfx.clear();
-        
-        const pos = unitToScreen(ds.targetPos, _grid);
-        gfx.x = pos.x; 
-        gfx.y = pos.y;
+    const pos = unitToScreen(ds.targetPos, _grid);
+    gfx.x = pos.x;
+    gfx.y = pos.y;
 
-        const radius = ds.spell.radius * _grid.cellSize;
-        const progress = ds.timer / ds.maxTimer; // 1.0 -> 0.0
+    const radius = ds.spell.radius * _grid.cellSize;
+    const progress = ds.timer / ds.maxTimer; // 1.0 -> 0.0
 
-        // Ground Ring
-        gfx.lineStyle(2, 0xFFFFFF, 0.5);
-        if (ds.teamId === 0) gfx.lineStyle(2, 0x00E676, 0.5); // Green (Ally)
-        else gfx.lineStyle(2, 0xFF1744, 0.5); // Red (Enemy)
+    // Ground Ring
+    gfx.lineStyle(2, 0xFFFFFF, 0.5);
+    if (ds.teamId === 0) gfx.lineStyle(2, 0x00E676, 0.5); // Green (Ally)
+    else gfx.lineStyle(2, 0xFF1744, 0.5); // Red (Enemy)
 
-        gfx.drawCircle(0, 0, radius);
+    gfx.drawCircle(0, 0, radius);
 
-        // Shrinking Fill (Timer)
-        gfx.beginFill(0xFFFFFF, 0.2);
-        gfx.drawCircle(0, 0, radius * progress); 
-        gfx.endFill();
+    // Shrinking Fill (Timer)
+    gfx.beginFill(0xFFFFFF, 0.2);
+    gfx.drawCircle(0, 0, radius * progress);
+    gfx.endFill();
+  });
+}
+
+// [NEW] Visual Floating Label for Card Usage
+export function createFloatingLabel(x, y, text, isTaboo) {
+  if (!_app) return;
+
+  // Container for Text + Outline
+  const container = new PIXI.Container();
+  container.x = x;
+  container.y = y - 40; // Spawn slightly above unit
+  container.zIndex = 2000; // Very high zIndex
+
+  // Style Selection
+  let style;
+  if (isTaboo) {
+    // Red Outline, White Text (Requested: "font putih tpi outline merah")
+    style = new PIXI.TextStyle({
+      fontFamily: 'Arial',
+      fontSize: 20, // Reduced from 24
+      fontWeight: 'bold',
+      fill: '#FFFFFF',
+      stroke: '#FF0000',
+      strokeThickness: 3, // Reduced
+      dropShadow: true,
+      dropShadowColor: '#000000',
+      dropShadowBlur: 2,
+      dropShadowAngle: Math.PI / 6,
+      dropShadowDistance: 1,
     });
+  } else {
+    // Standard White Text
+    style = new PIXI.TextStyle({
+      fontFamily: 'Arial',
+      fontSize: 16, // Reduced from 20
+      fontWeight: 'bold',
+      fill: '#FFFFFF',
+      stroke: '#000000',
+      strokeThickness: 2 // Reduced
+    });
+  }
+
+  const richText = new PIXI.Text(text, style);
+  richText.anchor.set(0.5);
+  container.addChild(richText);
+
+  _app.stage.addChild(container);
+
+  // Animation: Move Up and Fade Out
+  let time = 0;
+  const duration = 1.5; // Reduced from 2.0
+  const startY = container.y;
+
+  const animate = (delta) => {
+    time += delta / 60; // Approximate seconds
+    if (time >= duration) {
+      _app.ticker.remove(animate);
+      container.destroy();
+    } else {
+      const progress = time / duration;
+      // Ease Out Quad
+      const ease = 1 - (1 - progress) * (1 - progress);
+
+      container.y = startY - (25 * ease); // Reduced from 50
+      container.alpha = 1 - (progress * progress * progress); // Fade out cubic
+    }
+  };
+
+  _app.ticker.add(animate);
 }

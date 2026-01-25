@@ -17,12 +17,12 @@ export const CARDS = {
     },
     description: "A heavily armored soldier who holds the line against any tide."
   },
-  
+
   "vessel_02": {
     id: "vessel_02",
-    name: "twin Ranger",
+    name: "Sun Ranger", // [FIX] Updated from Twin Ranger
     type: "VESSEL",
-    minFaction: "neutral",
+    minFaction: "solaris", // [FIX] Updated from Neutral
     cost: 4,
     stats: {
       hp: 140, damage: 45, range: 5.0, sightRange: 7.0, speed: 5.0, attackSpeed: 1.3,
@@ -48,7 +48,7 @@ export const CARDS = {
       deployTime: 2.0, aimTime: 0.5,
       movementType: 'ground',
       targetTeam: 'enemy',
-      targetRule: 'building_only', 
+      targetRule: 'building_only',
       targetHeight: 'ground'
     },
     description: "A living siege engine forged from the abyss to shatter walls."
@@ -62,12 +62,12 @@ export const CARDS = {
     minFaction: "solaris",
     cost: 4,
     stats: {
-      hp: 180, 
-      damage: -80, 
+      hp: 180,
+      damage: -80,
       range: 4.5, sightRange: 6.5, speed: 4.0, attackSpeed: 0.8,
       deployTime: 1.0, aimTime: 0.4,
-      movementType: 'ground', 
-      targetTeam: 'ally',    
+      movementType: 'ground',
+      targetTeam: 'ally',
       targetRule: 'unit_only',
       targetHeight: 'both'
     },
@@ -82,9 +82,9 @@ export const CARDS = {
     minFaction: "noctis",
     cost: 3,
     stats: {
-      count: 5,           
-      spawnRadius: 2,   
-      hp: 65, damage: 15, range: 1, sightRange: 5.0, speed: 4.5, attackSpeed: 1.0,
+      count: 5,
+      spawnRadius: 2, radius: 0.4,
+      hp: 65, damage: 15, range: 0.7, sightRange: 5.0, speed: 4.5, attackSpeed: 1.0,
       deployTime: 1.0, aimTime: 0.1,
       movementType: 'ground',
       targetTeam: 'enemy', targetRule: 'any', targetHeight: 'ground'
@@ -102,8 +102,8 @@ export const CARDS = {
     stats: {
       hp: 900, damage: 70, range: 1.0, sightRange: 5.5, speed: 3.5, attackSpeed: 0.6,
       deployTime: 1.5, aimTime: 0.3,
-      aoeRadius: 2.0,     
-      aoeType: 'self',    
+      aoeRadius: 2.0,
+      aoeType: 'self',
       movementType: 'ground',
       targetTeam: 'enemy', targetRule: 'any', targetHeight: 'ground'
     },
@@ -120,13 +120,13 @@ export const CARDS = {
     stats: {
       hp: 150, damage: 100, range: 5.0, sightRange: 7.0, speed: 3.5, attackSpeed: 0.6,
       deployTime: 1.0, aimTime: 0.5,
-      aoeRadius: 1.5,    
-      projectileType: 'fireball', 
+      aoeRadius: 1.5,
+      projectileType: 'fireball',
       movementType: 'ground',
       targetTeam: 'enemy', targetRule: 'any', targetHeight: 'both'
     }
   },
-  
+
   // SPELL (Solaris)
   "ritual_01": {
     id: "ritual_01",
@@ -150,10 +150,10 @@ export const CARDS = {
     minFaction: "solaris",
     cost: 4,
     spellData: {
-        type: "single_target",
-        damage: 600,
-        targetTeam: 'enemy',
-        buffs: [{ type: 'stun', duration: 1.0 }]
+      type: "single_target",
+      damage: 600,
+      targetTeam: 'enemy',
+      buffs: [{ type: 'stun', duration: 1.0 }]
     },
     description: "Deals massive damage to a single unit and stuns it."
   },
@@ -171,7 +171,7 @@ export const CARDS = {
       movementType: 'ground',
       targetTeam: 'enemy', targetRule: 'any', targetHeight: 'ground',
       traits: {
-        mounted: true,      
+        mounted: true,
         charge: { enabled: true, windupTime: 2.0, speedMult: 2.0, damageMult: 2.0 }
       }
     }
@@ -195,18 +195,18 @@ export const CARDS = {
   },
 
   // HEALER 2 (Solaris)
-  "vessel_healer_2": {  
+  "vessel_healer_2": {
     id: "vessel_healer_2",
     name: "Divine Priest",
     type: "VESSEL",
     minFaction: "solaris",
     cost: 4,
-    stats:{
+    stats: {
       hp: 70, damage: -100, range: 2.0, sightRange: 6.5, speed: 4.0, attackSpeed: 1.0,
       deployTime: 1.0, aimTime: 0.5,
       movementType: 'ground',
       targetTeam: 'ally', targetRule: 'unit_only', targetHeight: 'both',
-      aoeRadius: 2.0, aoeType: 'self', 
+      aoeRadius: 2.0, aoeType: 'self',
     }
   },
 
@@ -251,7 +251,7 @@ export const CARDS = {
     minFaction: "solaris",
     cost: 3,
     spellData: {
-      type: "buff_area",      
+      type: "buff_area",
       radius: 3.5,
       targetTeam: 'ally',
       buffs: [
@@ -270,7 +270,7 @@ export const CARDS = {
     cost: 3,
     spellData: {
       type: "buff_area", radius: 3.0, targetTeam: 'enemy',
-      buffs: [ { type: 'root', value: 1, duration: 5.0 } ]
+      buffs: [{ type: 'root', value: 1, duration: 5.0 }]
     }
   },
 
@@ -286,7 +286,7 @@ export const CARDS = {
       deployTime: 1.0, aimTime: 0.2,
       movementType: 'ground',
       targetTeam: 'enemy', targetRule: 'any', targetHeight: 'both',
-      projectileType: 'arrow_purple', 
+      projectileType: 'arrow_purple',
       traits: { silenceOnHit: true, silenceDuration: 3.0 }
     }
   },
@@ -331,11 +331,11 @@ export const CARDS = {
     cost: 7,
     stats: {
       hp: 1700, damage: 50, range: 1.0, speed: 1.5, radius: 0.8,
-      traits: { 
-          // Friendly Fire Spawn (Fall Damage?)
-          onSpawn: { type: 'damage_aoe', radius: 2.0, damage: 200, targetTeam: 'all' },
-          // Friendly Fire Death (Big Bomb)
-          onDeath: { type: 'damage_aoe', radius: 3.5, damage: 1000, delay: 2.0, targetTeam: 'all' } 
+      traits: {
+        // Friendly Fire Spawn (Fall Damage?)
+        onSpawn: { type: 'damage_aoe', radius: 2.0, damage: 200, targetTeam: 'all' },
+        // Friendly Fire Death (Big Bomb)
+        onDeath: { type: 'damage_aoe', radius: 3.5, damage: 1000, delay: 2.0, targetTeam: 'all' }
       }
     },
     description: "Massive unit that damages EVERYONE nearby when landing and dying."
@@ -350,7 +350,7 @@ export const CARDS = {
     cost: 4,
     stats: {
       hp: 600, damage: 90, range: 4.0, speed: 3.0,
-      traits: { 
+      traits: {
         onSpawn: { type: 'damage_aoe', radius: 2.0, damage: 150, buffs: [{ type: 'stun', duration: 0.5 }] },
         stunOnHit: true, stunDuration: 0.4
       }
@@ -365,15 +365,15 @@ export const CARDS = {
     minFaction: "neutral",
     cost: 8,
     stats: {
-      hp: 3000, damage: 100, speed: 1, radius: 1, range:2, targetRule:'building_only',
+      hp: 3000, damage: 100, speed: 1, radius: 1, range: 2, targetRule: 'building_only',
       traits: { onDeath: { type: 'spawn', unitId: 'vessel_golemite', count: 2 } }
     }
   },
-  
+
   // HIDDEN (Tokens)
-  "vessel_golemite":{
-    id: "vessel_golemite", name: "Golemite", type: "VESSEL", minFaction: "neutral", cost: 0, isToken:true,
-    stats:{ hp: 150, damage: 50, range:1.5, radius: 0.5, speed:2.0, targetRule:'building_only', traits:{ onDeath:{ type: 'damage_aoe', radius: 1.5, damage: 200 } } }
+  "vessel_golemite": {
+    id: "vessel_golemite", name: "Golemite", type: "VESSEL", minFaction: "neutral", cost: 0, isToken: true,
+    stats: { hp: 150, damage: 50, range: 1.5, radius: 0.5, speed: 2.0, targetRule: 'building_only', traits: { onDeath: { type: 'damage_aoe', radius: 1.5, damage: 200 } } }
   },
 
   // POISON (Noctis)
@@ -385,7 +385,7 @@ export const CARDS = {
     cost: 4,
     spellData: {
       type: "zone_lingering", radius: 3.5, duration: 7.0, interval: 0.3, damage: 20, targetTeam: 'enemy',
-      buffs: [ { type: 'speed_mult', value: 0.9, duration: 1.0 } ]
+      buffs: [{ type: 'speed_mult', value: 0.9, duration: 1.0 }]
     }
   },
 
@@ -398,7 +398,7 @@ export const CARDS = {
     cost: 3,
     spellData: {
       type: "zone_lingering", radius: 3.0, duration: 6.0, interval: 1.0, damage: 0, targetTeam: 'ally',
-      buffs: [ { type: 'regen', value: 70, duration: 0.2 } ]
+      buffs: [{ type: 'regen', value: 70, duration: 0.2 }]
     }
   },
 
@@ -412,9 +412,9 @@ export const CARDS = {
   // [NEW] FROST NOVA (AoE Stun/Freeze)
   "ritual_frost_nova": {
     id: "ritual_frost_nova", name: "Frost Nova", type: "RITUAL", minFaction: "neutral", cost: 4,
-    spellData: { 
-        type: "damage_aoe", damage: 70, radius: 2.5, delay: 0.2, // Fast pop
-        buffs: [{ type: 'stun', duration: 2.5 }]
+    spellData: {
+      type: "damage_aoe", damage: 70, radius: 2.5, delay: 0.2, // Fast pop
+      buffs: [{ type: 'stun', duration: 2.5 }]
     },
     description: "Freezes enemies in a large area."
   },
@@ -429,13 +429,13 @@ export const CARDS = {
   // [NEW] DIVINE HEAL (Single Target)
   "ritual_heal_single": {
     id: "ritual_heal_single", name: "Holy Light", type: "RITUAL", minFaction: "solaris", cost: 3,
-    spellData: { 
-        type: "single_target", targetTeam: 'ally', 
-        damage: -500, // Negative damage = Heal? Check spellSystem! If not, use buff regen.
-        // Assuming damage subtraction logic handles negatives as heal or need explicit heal logic?
-        // Let's use Buffs to be safe if 'damage' only does subtraction.
-        // Actually, spellSystem: target.hp -= spell.damage. So -(-500) = +500. It works!
-        buffs: [{ type: 'shield', value: 200, duration: 5.0 }]
+    spellData: {
+      type: "single_target", targetTeam: 'ally',
+      damage: -500, // Negative damage = Heal? Check spellSystem! If not, use buff regen.
+      // Assuming damage subtraction logic handles negatives as heal or need explicit heal logic?
+      // Let's use Buffs to be safe if 'damage' only does subtraction.
+      // Actually, spellSystem: target.hp -= spell.damage. So -(-500) = +500. It works!
+      buffs: [{ type: 'shield', value: 200, duration: 5.0 }]
     },
     description: "Heals a friendly unit for 500 HP and shields them."
   },
@@ -443,27 +443,27 @@ export const CARDS = {
   // [NEW] BERSERK (Single Target Buff)
   "ritual_berserk": {
     id: "ritual_berserk", name: "Bloodlust", type: "RITUAL", minFaction: "noctis", cost: 3,
-    spellData: { 
-        type: "single_target", targetTeam: 'ally', 
-        buffs: [
-            { type: 'damage_mult', value: 2.0, duration: 8.0 },
-            { type: 'attack_speed_mult', value: 2.0, duration: 8.0 },
-            { type: 'speed_mult', value: 1.5, duration: 8.0 },
-            { type: 'poison', value: 30, duration: 8.0 }
-        ]
+    spellData: {
+      type: "single_target", targetTeam: 'ally',
+      buffs: [
+        { type: 'damage_mult', value: 2.0, duration: 8.0 },
+        { type: 'attack_speed_mult', value: 2.0, duration: 8.0 },
+        { type: 'speed_mult', value: 1.5, duration: 8.0 },
+        { type: 'poison', value: 30, duration: 8.0 }
+      ]
     },
     description: "Greatly boosts a unit's combat stats."
   },
   // [NEW] SILENCE (Single Target Debuff)
   "ritual_silence": {
     id: "ritual_silence", name: "Silence", type: "RITUAL", minFaction: "noctis", cost: 3,
-    spellData: { 
-        type: "single_target", targetTeam: 'enemy', 
-        buffs: [
-            { type: 'silence', duration: 5.0 }
-        ]
+    spellData: {
+      type: "single_target", targetTeam: 'enemy',
+      buffs: [
+        { type: 'silence', duration: 5.0 }
+      ]
     },
-      description: "Silences a unit, preventing it from using abilities."
+    description: "Silences a unit, preventing it from using abilities."
   },
 
   // === TABOO CARDS ===
@@ -475,10 +475,10 @@ export const CARDS = {
     type: "RITUAL",
     minFaction: "noctis",
     isTaboo: true,
-    demerit: { type: 'arcana_mult', value: 0.8 }, 
+    demerit: { type: 'arcana_mult', value: 0.8 },
     cost: 0,
     spellData: {
-        type: "gain_mana", value: 4 // Buffed to 4
+      type: "gain_mana", value: 4 // Buffed to 4
     },
     description: "Seize power now, at the cost of your future. Instantly gain 4 Arcana, but permanently reduce regeneration."
   },
@@ -495,22 +495,22 @@ export const CARDS = {
       hp: 1100, damage: 200, range: 1.5, sightRange: 6.0, speed: 4.0, attackSpeed: 0.8,
       deployTime: 1.0, aimTime: 0.4,
       movementType: 'ground',
-      targetTeam: 'all', 
+      targetTeam: 'all',
       targetRule: 'any', targetHeight: 'ground'
     },
     description: "A once-noble hero corrupted by the void. Strikes blindly at friend and foe alike."
   },
   // === SANCTUM (Buildings) ===
-  
+
   "sanctum_tower": {
     id: "sanctum_tower",
     name: "Sentry Post",
-    type: "SANCTUM", 
+    type: "SANCTUM",
     minFaction: "neutral",
     cost: 4,
     stats: {
       hp: 1200, damage: 30, range: 6.0, sightRange: 7.0, speed: 0, attackSpeed: 1.0,
-      deployTime: 5.0, 
+      deployTime: 5.0,
       movementType: 'none',
       targetTeam: 'enemy', targetRule: 'any', targetHeight: 'both',
       isBuilding: true,
@@ -547,7 +547,7 @@ export const CARDS = {
     demerit: { type: 'hq_damage', value: 500 }, // Hurts own King Tower
     cost: 0,
     spellData: {
-        type: "gain_mana", value: 3
+      type: "gain_mana", value: 3
     },
     description: "Sacrifice your King's health to gain immediate Arcana."
   },
@@ -562,7 +562,7 @@ export const CARDS = {
       hp: 2500, damage: 0, range: 0, speed: 0,
       movementType: 'none',
       isBuilding: true,
-      radius: 1.0, 
+      radius: 1.0,
       traits: {
         aura: { radius: 3.0, targetTeam: 'all', damage: 20, interval: 1.0 } // Rots everyone nearby
       }
@@ -584,7 +584,7 @@ export const CARDS = {
       movementType: 'ground',
       targetTeam: 'enemy', targetRule: 'any',
       traits: {
-          onHit: { chance: 0.3, type: 'blind', duration: 2.0 } // Blinds enemies
+        onHit: { chance: 0.3, type: 'blind', duration: 2.0 } // Blinds enemies
       }
     },
     description: "A heavily armored guardian whose shield reflects blinding light."
@@ -675,9 +675,9 @@ export const CARDS = {
     minFaction: "neutral",
     cost: 4,
     spellData: {
-        type: "damage_aoe", damage: 100, radius: 4.0, 
-        targetTeam: 'enemy', targetRule: 'building_only', // Focus buildings
-        buffs: [{ type: 'speed_mult', value: 0.3, duration: 3.0 }] // Slows units too logic dependent
+      type: "damage_aoe", damage: 100, radius: 4.0,
+      targetTeam: 'enemy', targetRule: 'building_only', // Focus buildings
+      buffs: [{ type: 'speed_mult', value: 0.3, duration: 3.0 }] // Slows units too logic dependent
     },
     description: "Shakes the ground, dealing damage to buildings and slowing units."
   },
@@ -689,8 +689,8 @@ export const CARDS = {
     minFaction: "solaris",
     cost: 3,
     spellData: {
-        type: "buff_area", radius: 3.0, targetTeam: 'ally',
-        buffs: [{ type: 'shield', value: 300, duration: 6.0 }]
+      type: "buff_area", radius: 3.0, targetTeam: 'ally',
+      buffs: [{ type: 'shield', value: 300, duration: 6.0 }]
     },
     description: "Grants a temporary shield to all allies in the area."
   },
@@ -705,7 +705,7 @@ export const CARDS = {
       hp: 400, damage: 0, range: 0.5, speed: 0, movementType: 'none', isBuilding: true,
       radius: 0.6,
       traits: {
-          aura: { radius: 1.0, targetTeam: 'enemy', damage: 50, interval: 0.5 }
+        aura: { radius: 1.0, targetTeam: 'enemy', damage: 50, interval: 0.5 }
       }
     },
     description: "Deals damage to enemies walking over it."
@@ -720,7 +720,7 @@ export const CARDS = {
     demerit: { type: 'hq_damage', value: 200 },
     cost: 2,
     spellData: {
-        type: "damage_aoe", radius: 3.0, damage: 400, targetTeam: 'enemy'
+      type: "damage_aoe", radius: 3.0, damage: 400, targetTeam: 'enemy'
     },
     description: "Deals high damage to enemies, but consumes some of your Essence."
   },
@@ -738,7 +738,124 @@ export const CARDS = {
       targetTeam: 'enemy', targetRule: 'building_only',
       aoeRadius: 1.5, projectileType: 'rock'
     },
-    description: "Long-range siege weapon effective against buildings."
-  }
+    description: "A siege engine that launches rocks at enemy buildings."
+  },
+    // === MORTIS CARDS ===
 
-};
+    "vessel_skeleton_king": {
+      id: "vessel_skeleton_king",
+      name: "Skeleton King",
+      type: "VESSEL",
+      minFaction: "mortis",
+      cost: 7,
+      stats: {
+        hp: 2500, damage: 150, range: 1.5, speed: 2.0, attackSpeed: 1.2,
+        movementType: 'ground',
+        targetTeam: 'enemy', targetRule: 'any',
+        traits: {
+          onDeath: { type: 'spawn', unitId: 'vessel_swarm', count: 4 } // Spawns Skeletons on death
+        }
+      },
+      description: "The undying lord of the crypt. Raises a legion upon his second death."
+    },
+
+    "vessel_grave_keeper": {
+      id: "vessel_grave_keeper",
+      name: "Grave Keeper",
+      type: "VESSEL",
+      minFaction: "mortis",
+      cost: 3,
+      stats: {
+        hp: 400, damage: 40, range: 4.0, speed: 2.5, attackSpeed: 1.0,
+        movementType: 'ground',
+        targetTeam: 'enemy', targetRule: 'any',
+        traits: {
+          aura: { radius: 3.0, targetTeam: 'ally', buffs: [{ type: 'regen', value: 10 }] }
+        }
+      },
+      description: "Tends to the dead, granting regeneration to nearby allies."
+    },
+
+    "ritual_sacrifice": {
+      id: "ritual_sacrifice",
+      name: "Dark Ritual",
+      type: "RITUAL",
+      minFaction: "mortis",
+      cost: 1, // Cheap cast
+      spellData: {
+        type: "damage_aoe", radius: 2.5, damage: 9999, // Kil ally
+        targetTeam: 'ally',
+        // Logic needed: Gain mana per unit killed. 
+        // Current system mostly supports simple damage/buffs.
+        // We might need custom trait or simpler effect: "Kill to Heal King?"
+        // Simpler for now: "Heal King 500 for cost 1, but dmg allies in area"
+        buffs: [{ type: 'heal_king', value: 500 }] // hypothetical effect
+      },
+      description: "Sacrifices nearby allies to restore health to your King Tower."
+    },
+
+    // === CHRONIS CARDS ===
+
+    "vessel_chrono_mage": {
+      id: "vessel_chrono_mage",
+      name: "Chrono Mage",
+      type: "VESSEL",
+      minFaction: "chronis",
+      cost: 4,
+      stats: {
+        hp: 450, damage: 60, range: 5.0, speed: 3.5, attackSpeed: 1.0,
+        movementType: 'ground',
+        targetTeam: 'enemy', targetRule: 'any',
+        traits: {
+          onHit: { chance: 1.0, type: 'slow', value: 0.5, duration: 1.0 } // 50% Slow
+        }
+      },
+      description: "Weaves time to slow enemies with every attack."
+    },
+
+    "vessel_time_walker": {
+      id: "vessel_time_walker",
+      name: "Time Walker",
+      type: "VESSEL",
+      minFaction: "chronis",
+      cost: 3,
+      stats: {
+        hp: 800, damage: 100, range: 1.0, speed: 4.0, attackSpeed: 0.8,
+        movementType: 'ground',
+        targetTeam: 'enemy', targetRule: 'any',
+        traits: {
+          // Blink/Phase logic?
+          blink: { enabled: true, range: 3.0, cooldown: 5.0 }
+        }
+      },
+      description: "A mysterious traveler who can blink through space."
+    },
+
+    "ritual_rewind": {
+      id: "ritual_rewind",
+      name: "Temporal Shift",
+      type: "RITUAL",
+      minFaction: "chronis",
+      cost: 3,
+      spellData: {
+        type: "buff_area", radius: 3.0, targetTeam: 'ally',
+        buffs: [{ type: 'heal', value: 300 }] // Simple Rewind = Heal
+      },
+      description: "Reverses wounds on friendly units, restoring health."
+    },
+
+    "sanctum_stasis": {
+      id: "sanctum_stasis",
+      name: "Stasis Trap",
+      type: "SANCTUM",
+      minFaction: "chronis",
+      cost: 2,
+      stats: {
+        hp: 200, isBuilding: true, movementType: 'none', radius: 0.5,
+        traits: {
+          aura: { radius: 1.5, targetTeam: 'enemy', buffs: [{ type: 'stun', duration: 0.2, interval: 1.0 }] } // Periodic Stun
+        }
+      },
+      description: "Periodically freezes nearby enemies in time."
+    }
+  };

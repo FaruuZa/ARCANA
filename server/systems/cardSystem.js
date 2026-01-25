@@ -110,6 +110,7 @@ export function playUnitCard(gameState, teamId, cardId, col, row) {
             projectileType: cardInfo.stats.projectileType || null,
             count: count,
             spawnRadius: spawnRadius,
+            radius: cardInfo.stats.radius || 0.5, // [FIX] Pass Radius
             traits: cardInfo.stats.traits || {},
         });
 

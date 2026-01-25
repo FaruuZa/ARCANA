@@ -1,5 +1,5 @@
 
-import { createGameState, createRandomDeck, spawnUnit } from "./gameState.js";
+import { createGameState, createRandomDeck, spawnUnit, createTowers } from "./gameState.js";
 import { gameLoop } from "./gameLoop.js";
 import { playUnitCard, playSpellCard, playSanctumCard } from "./systems/cardSystem.js";
 import { rollOmen } from "./systems/omenSystem.js";
@@ -16,12 +16,12 @@ export class Room {
         this.roomId = roomId;
         this.io = io;
         this.name = roomName || `Room ${roomId}`;
-        
+
         this.gameState = createGameState();
         this.sessions = { 0: null, 1: null }; // teamId -> socketId
         this.disconnectTimers = { 0: null, 1: null };
         this.rematchVotes = new Set();
-        
+
         this.intervalId = null;
         this.started = false;
 
@@ -83,7 +83,7 @@ export class Room {
             roomId: this.roomId,
             roomName: this.name
         });
-        
+
         return assignedTeam;
     }
 
@@ -93,17 +93,17 @@ export class Room {
             if (this.sessions[teamId] === socket.id) {
                 this.sessions[teamId] = null;
                 this.gameState.players[teamId].connected = false;
-                
+
                 const loreName = this.getFactionLoreName(teamId);
                 this.io.to(this.roomId).emit("toast", { msg: `${loreName} has severed the connection! Time freezes.`, type: "error" });
-                
+
                 this.handlePlayerDisconnect(teamId);
 
                 if (this.rematchVotes.has(teamId)) {
                     this.rematchVotes.delete(teamId);
                     this.gameState.rematchCount = this.rematchVotes.size;
                 }
-                
+
                 // [NEW] Check Empty Room logic handled by RoomManager or here?
                 // If both sessions are null, we can mark room as empty?
                 // But we have a pause/reconnect window. 
@@ -114,14 +114,14 @@ export class Room {
                     // If room is empty, we should probably close it to save resources
                     // But maybe allow short reconnect?
                     // Let's rely on RoomManager or just set a flag.
-                    this.isEmpty = true; 
+                    this.isEmpty = true;
                 }
             }
         }
     }
 
     handlePlayerDisconnect(teamId) {
-        if (this.gameState.phase !== 'battle') return; 
+        if (this.gameState.phase !== 'battle') return;
 
         const loreName = this.getFactionLoreName(teamId);
 
@@ -138,10 +138,10 @@ export class Room {
                 this.gameState.phase = "ended";
                 this.gameState.pauseEndTime = null;
                 this.gameState.winner = (teamId === 0) ? 1 : 0;
-                
-                this.io.to(this.roomId).emit("toast", { 
-                    msg: `${loreName} has abandoned the timeline. Opponent wins by default.`, 
-                    type: "info" 
+
+                this.io.to(this.roomId).emit("toast", {
+                    msg: `${loreName} has abandoned the timeline. Opponent wins by default.`,
+                    type: "info"
                 });
             }
         }, PAUSE_DURATION_MS);
@@ -168,28 +168,28 @@ export class Room {
 
     startBattle() {
         if (this.gameState.phase === 'battle') return;
-        
+
         // CHECK: Both players must be ready (handled by submit_deck checks mostly, but double check)
         const p0 = this.gameState.players[0];
         const p1 = this.gameState.players[1];
-        
+
         // Critical: Only start if both are ready OR if prep timer ended and we force them?
         // But for specific user request: "game hanya bisa dimulai jika ada 2 player"
         if (this.sessions[0] === null || this.sessions[1] === null) {
-             this.io.to(this.roomId).emit("toast", { msg: "Cannot start battle: Waiting for 2nd player.", type: "warning" });
-             return;
+            this.io.to(this.roomId).emit("toast", { msg: "Cannot start battle: Waiting for 2nd player.", type: "warning" });
+            return;
         }
 
         this.gameState.phase = 'battle';
-        this.gameState.prepEndTime = null; 
-        
+        this.gameState.prepEndTime = null;
+
         this.io.to(this.roomId).emit("curtain_drop");
 
         // Roll Omen
         const omen = rollOmen(this.gameState);
         if (omen) {
-            this.io.to(this.roomId).emit("omen_announcement", { 
-                name: omen.name, 
+            this.io.to(this.roomId).emit("omen_announcement", {
+                name: omen.name,
                 description: omen.description,
                 type: "major"
             });
@@ -198,6 +198,41 @@ export class Room {
                 name: "The Void",
                 description: "No Omen appears this night.",
                 type: "minor"
+            });
+        }
+
+        // [NEW] Chaos Swap Logic
+        if (omen && omen.id === 'chaos_swap') {
+            const p0 = this.gameState.players[0];
+            const p1 = this.gameState.players[1];
+
+            // Swap Data (Faction, Deck, Modifiers)
+            const tempFaction = p0.faction;
+            p0.faction = p1.faction;
+            p1.faction = tempFaction;
+
+            const tempDeck = p0.deck;
+            p0.deck = p1.deck;
+            p1.deck = tempDeck;
+
+            const tempMods = p0.modifiers;
+            p0.modifiers = p1.modifiers;
+            p1.modifiers = tempMods;
+
+            // Re-create Towers to match new Factions
+            // We use the new factions: [p0.faction, p1.faction]
+            const newFactions = [p0.faction, p1.faction];
+
+            // Re-generate towers starting from ID 1
+            this.gameState.buildings = createTowers(1, newFactions);
+
+            // Reset Entity ID Counter (Safe since no units spawned yet)
+            this.gameState.nextEntityId = 1 + this.gameState.buildings.length;
+
+            // Optional: Broadcast "Swap" specific/toast
+            this.io.to(this.roomId).emit("toast", {
+                msg: "CHAOS! Factions and Decks have been SWAPPED!",
+                type: "error"
             });
         }
 
@@ -224,7 +259,7 @@ export class Room {
         if (this.gameState.phase !== 'preparation' && this.gameState.phase !== 'deck_building') return;
 
         const player = this.gameState.players[teamId];
-        if (player.ready) return; 
+        if (player.ready) return;
 
         if (!Array.isArray(cardIds) || cardIds.length !== DECK_SIZE) {
             socket.emit("toast", { msg: `Destiny requires exactly ${DECK_SIZE} cards.`, type: "error" });
@@ -235,8 +270,8 @@ export class Room {
         for (const id of cardIds) {
             const cardData = CARDS[id];
             if (!cardData) {
-                 socket.emit("toast", { msg: `Invalid Arcanum ID: ${id}`, type: "error" });
-                 return;
+                socket.emit("toast", { msg: `Invalid Arcanum ID: ${id}`, type: "error" });
+                return;
             }
             if (cardData.minFaction !== 'neutral' && cardData.minFaction !== player.faction) {
                 socket.emit("toast", { msg: `The ${cardData.name} refuses your call (${cardData.minFaction} only).`, type: "error" });
@@ -257,21 +292,21 @@ export class Room {
         // Check Start
         const p0 = this.gameState.players[0];
         const p1 = this.gameState.players[1];
-        
+
         // Wait for BOTH to be ready
         if (p0.ready && p1.ready) {
-             // DOUBLE CHECK 2 Players are actually connected/present
-             if (this.sessions[0] && this.sessions[1]) {
+            // DOUBLE CHECK 2 Players are actually connected/present
+            if (this.sessions[0] && this.sessions[1]) {
                 this.startBattle();
-             } else {
+            } else {
                 this.io.to(this.roomId).emit("toast", { msg: "Waiting for second player to join...", type: "info" });
-             }
+            }
         }
     }
 
     spawnUnit(teamId, data, socket) {
         if (teamId === -1) return;
-        
+
         const card = CARDS[data.cardId];
         if (!card) return;
 
@@ -279,17 +314,43 @@ export class Room {
         if (card.type === 'SANCTUM') {
             success = playSanctumCard(this.gameState, teamId, data.cardId, data.col, data.row);
         } else {
-             // Default to Unit (VESSEL)
+            // Default to Unit (VESSEL)
             success = playUnitCard(this.gameState, teamId, data.cardId, data.col, data.row);
         }
-        
-        if (!success) socket.emit("error", "Invalid spawn");
+
+        if (!success) {
+            socket.emit("error", "Invalid spawn");
+        } else {
+            // [NEW] Announce Card Usage
+            this.io.to(this.roomId).emit("card_used", {
+                type: 'spawn',
+                name: card.name,
+                isTaboo: card.isTaboo,
+                team: teamId,
+                col: data.col,
+                row: data.row
+            });
+        }
     }
 
     castRitual(teamId, data, socket) {
         if (this.gameState.phase !== "battle") return;
         if (teamId === -1) return;
-        playSpellCard(this.gameState, socket.id, teamId, data.cardId, data.col, data.row, data.targetId);
+        const success = playSpellCard(this.gameState, socket.id, teamId, data.cardId, data.col, data.row, data.targetId);
+
+        if (success) {
+            const card = CARDS[data.cardId];
+            if (card) {
+                this.io.to(this.roomId).emit("card_used", {
+                    type: 'spell',
+                    name: card.name,
+                    isTaboo: card.isTaboo,
+                    team: teamId,
+                    col: data.col,
+                    row: data.row
+                });
+            }
+        }
     }
 
     handleRematch(teamId) {
@@ -301,9 +362,9 @@ export class Room {
 
         if (this.rematchVotes.has(0) && this.rematchVotes.has(1)) {
             // Check connected again?
-             if (this.sessions[0] && this.sessions[1]) {
+            if (this.sessions[0] && this.sessions[1]) {
                 this.resetGame();
-             }
+            }
         }
     }
 
@@ -317,9 +378,16 @@ export class Room {
     getFactionLoreName(id) {
         const p = this.gameState.players[id];
         if (!p) return `Team ${id}`;
-        return p.faction === 'solaris' ? "The Order of Solaris" : "The Cult of Noctis";
+
+        switch (p.faction) {
+            case 'solaris': return "The Order of Solaris";
+            case 'noctis': return "The Cult of Noctis";
+            case 'mortis': return "The Legion of Mortis";
+            case 'chronis': return "The Keepers of Chronis";
+            default: return p.faction.charAt(0).toUpperCase() + p.faction.slice(1);
+        }
     }
-    
+
     destroy() {
         if (this.intervalId) clearInterval(this.intervalId);
     }

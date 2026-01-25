@@ -16,17 +16,21 @@ export function initSocket() {
 
   socket.on("welcome", (data) => {
     console.log("Joined as Team:", data.myTeam);
-    
+
     // 1. Simpan Identitas
     gameState.setMyTeam(data.myTeam);
-    
+
     // 2. Set State Awal
     gameState.set(data.initialState);
   });
-  
+
   socket.on("state", (data) => {
     onStateUpdate(data);
   });
 
+  return socket;
+}
+
+export function getSocket() {
   return socket;
 }

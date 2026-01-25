@@ -1,5 +1,5 @@
 import { gameState, myTeamId } from "../state/gameState.js";
-import { MAX_ARCANA, DECK_SIZE } from "../../shared/constants.js";
+import { MAX_ARCANA, DECK_SIZE, MAX_TABOO_CARDS } from "../../shared/constants.js";
 import { CARDS } from "../../shared/data/cards.js"; // [NEW] Import CARDS
 import { initSocket } from "../net/socket.js";
 // [NEW] Import logic Hand
@@ -34,17 +34,17 @@ let isDeckSubmitted = false;
 // Setup Event Listener Tombol Game Over
 const btnRematch = document.getElementById("btn-rematch");
 if (btnRematch) {
-  btnRematch.onclick = () => {
-    if (_socket) _socket.emit("rematch_request");
-    // Reset Deck Builder State
-    selectedCards.clear();
-    isDeckSubmitted = false;
-    hasShownReveal = false; // [NEW] Reset reveal flag
-    lastRevealedFaction = null;
-    
-    btnRematch.disabled = true;
-    btnRematch.innerText = "WAITING...";
-  };
+    btnRematch.onclick = () => {
+        if (_socket) _socket.emit("rematch_request");
+        // Reset Deck Builder State
+        selectedCards.clear();
+        isDeckSubmitted = false;
+        hasShownReveal = false; // [NEW] Reset reveal flag
+        lastRevealedFaction = null;
+
+        btnRematch.disabled = true;
+        btnRematch.innerText = "WAITING...";
+    };
 }
 
 const btnQuit = document.getElementById("btn-quit");
@@ -56,148 +56,158 @@ if (btnQuit) {
 }
 
 export function initUI() {
-  _socket = initSocket();
+    _socket = initSocket();
 
-  _socket.on("toast", (data) => {
-    showToast(data.msg, data.type);
-  });
+    _socket.on("toast", (data) => {
+        showToast(data.msg, data.type);
+    });
 
-  // [NEW] Curtain Drop Handler
-  _socket.on("curtain_drop", () => {
-      // Logic: Just insure panel is in-game state
-      // Actually state.phase -> 'battle' will handle this in updatePanelState
-      // But we can add sound or special effect here if needed.
-  });
+    // [NEW] Curtain Drop Handler
+    _socket.on("curtain_drop", () => {
+        // Logic: Just insure panel is in-game state
+        // Actually state.phase -> 'battle' will handle this in updatePanelState
+        // But we can add sound or special effect here if needed.
+    });
 
-  // [NEW] Omen Announcement Handler
-  _socket.on("omen_announcement", (data) => {
-      // Show Overlay
-      if(elOmenOverlay) {
-          elOmenTitle.innerText = data.name;
-          elOmenDesc.innerText = data.description;
-          
-          elOmenTitle.style.animation = 'none';
-          elOmenOverlay.offsetHeight; /* trigger reflow */
-          elOmenTitle.style.animation = null; 
-          
-          elOmenOverlay.classList.add("visible");
-          
-          // Hide after 6 seconds (enough to read)
-          setTimeout(() => {
-              elOmenOverlay.classList.remove("visible");
-          }, 6000);
-      }
-  });
+    // [NEW] Omen Announcement Handler
+    _socket.on("omen_announcement", (data) => {
+        // Show Overlay
+        if (elOmenOverlay) {
+            elOmenTitle.innerText = data.name;
+            elOmenDesc.innerText = data.description;
 
-  gameState.subscribe((state) => {
-    updatePanelState(state);
-    updatePauseState(state);
-    if (myTeamId === -1) {
-      renderSpectatorHUD(state);
-    } else {
-      updateArcana(state);
-      // [NEW] Delegasikan ke hand.js
-      updateHand(state);
-    }
-  });
+            elOmenTitle.style.animation = 'none';
+            elOmenOverlay.offsetHeight; /* trigger reflow */
+            elOmenTitle.style.animation = null;
+
+            elOmenOverlay.classList.add("visible");
+
+            // Hide after 6 seconds (enough to read)
+            setTimeout(() => {
+                elOmenOverlay.classList.remove("visible");
+            }, 6000);
+        }
+    });
+
+    gameState.subscribe((state) => {
+        updatePanelState(state);
+        updatePauseState(state);
+        if (myTeamId === -1) {
+            renderSpectatorHUD(state);
+        } else {
+            updateArcana(state);
+            // [NEW] Delegasikan ke hand.js
+            updateHand(state);
+        }
+    });
 }
 
 function showToast(message, type = "info") {
-  if (!elToastContainer) return;
-  const toast = document.createElement("div");
-  toast.className = `toast ${type}`;
-  toast.innerText = message;
-  elToastContainer.appendChild(toast);
-  setTimeout(() => {
-    toast.style.animation = "toast-out 0.3s forwards";
-    toast.addEventListener("animationend", () => toast.remove());
-  }, 3000);
+    if (!elToastContainer) return;
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    toast.innerText = message;
+    elToastContainer.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = "toast-out 0.3s forwards";
+        toast.addEventListener("animationend", () => toast.remove());
+    }, 3000);
 }
 
 function updatePanelState(state) {
-  if (!elBottomPanel) return;
+    if (!elBottomPanel) return;
 
-  // -- PHASE: PREPARATION / DECK BUILDING --
-  if (state.phase === "preparation" || state.phase === "deck_building") {
-      elBottomPanel.classList.remove("panel-in-game"); 
-      // Panel Menutup (Naik). Di dalam panel ini kita render Deck Builder
-      
-      // Jika sudah submit/ready, tampilkan "Waiting for Opponent"
-      if (myTeamId !== -1 && state.players[myTeamId]) {
-           if (state.players[myTeamId].ready) {
-               renderWaitingScreen();
-           } else {
-               renderDeckBuilder(state.players[myTeamId].faction);
-           }
-      } else if (myTeamId === -1) {
-           // Spectator View during Deck Building
-           renderSpectatorWaitingScreen(state);
-      }
-      
-      if (elGameOver) elGameOver.classList.add("hidden");
+    // -- PHASE: PREPARATION / DECK BUILDING --
+    if (state.phase === "preparation" || state.phase === "deck_building") {
+        elBottomPanel.classList.remove("panel-in-game");
+        // Panel Menutup (Naik). Di dalam panel ini kita render Deck Builder
 
-  // -- PHASE: BATTLE --
-  } else if (state.phase === "battle") {
-    elBottomPanel.classList.add("panel-in-game"); // Turun
-    
-    // Clear Deck Builder Content to save memory/visuals
-    if(elBottomPanel.querySelector("#deck-builder")) {
-        // [FIX] DO NOT use innerHTML = "" because it wipes #game-hud
-        const db = document.getElementById("deck-builder");
-        if(db) db.remove();
-        
-         // Restore Game Over Screen hidden
-         if (elGameOver) elGameOver.classList.add("hidden");
+        // Jika sudah submit/ready, tampilkan "Waiting for Opponent"
+        if (myTeamId !== -1 && state.players[myTeamId]) {
+            if (state.players[myTeamId].ready) {
+                renderWaitingScreen();
+            } else {
+                renderDeckBuilder(state.players[myTeamId].faction);
+            }
+        } else if (myTeamId === -1) {
+            // Spectator View during Deck Building
+            renderSpectatorWaitingScreen(state);
+        }
+
+        if (elGameOver) elGameOver.classList.add("hidden");
+
+        // -- PHASE: BATTLE --
+    } else if (state.phase === "battle") {
+        elBottomPanel.classList.add("panel-in-game"); // Turun
+
+        // Clear Deck Builder Content to save memory/visuals
+        if (elBottomPanel.querySelector("#deck-builder")) {
+            // [FIX] DO NOT use innerHTML = "" because it wipes #game-hud
+            const db = document.getElementById("deck-builder");
+            if (db) db.remove();
+
+            // Restore Game Over Screen hidden
+            if (elGameOver) elGameOver.classList.add("hidden");
+        }
+
+        // Ensure HUD is visible (css handles this via opacity on panel-in-game)
+
+        if (btnRematch) {
+            btnRematch.disabled = false;
+            btnRematch.innerText = "REMATCH";
+        }
+        if (elRematchStatus) elRematchStatus.classList.add("hidden");
+
+        // -- PHASE: ENDED --
+    } else if (state.phase === "ended") {
+        if (elPauseOverlay) elPauseOverlay.classList.add("hidden");
+        elBottomPanel.classList.remove("panel-in-game"); // Naik lagi
+
+        if (elGameOver) {
+            elGameOver.classList.remove("hidden");
+            const isWinner = state.winner === myTeamId;
+            if (elGoTitle && elGoMsg) {
+                // [LORE] Game Over Text
+                // [LORE] Game Over Text using Dynamic Factions
+                const myFaction = (state.players[myTeamId] && state.players[myTeamId].faction) || "neutral";
+
+                if (isWinner) {
+                    const fName = myFaction.toUpperCase();
+                    if (myFaction === 'solaris') {
+                        elGoTitle.innerText = "LIGHT PREVAILS";
+                        elGoTitle.style.color = "#FFD700";
+                        elGoMsg.innerText = "The Order of Solaris has secured destiny.";
+                    } else if (myFaction === 'noctis') {
+                        elGoTitle.innerText = "THE VOID CONSUMES";
+                        elGoTitle.style.color = "#9C27B0";
+                        elGoMsg.innerText = "The Cult of Noctis has broken fate.";
+                    } else if (myFaction === 'mortis') { // [NEW] Mortis
+                        elGoTitle.innerText = "DEATH ASCENDS";
+                        elGoTitle.style.color = "#4CAF50"; // Green/Necro
+                        elGoMsg.innerText = "Every end is but a resource.";
+                    } else if (myFaction === 'chronis') { // [NEW] Chronis
+                        elGoTitle.innerText = "TIME CONVERGED";
+                        elGoTitle.style.color = "#2196F3"; // Blue/Time
+                        elGoMsg.innerText = "All timelines lead to this moment.";
+                    } else {
+                        elGoTitle.innerText = `${fName} VICTORIOUS`; // Fallback
+                        elGoTitle.style.color = "#00FF00";
+                        elGoMsg.innerText = "The enemy King has fallen!";
+                    }
+                } else {
+                    elGoTitle.innerText = "DEFEAT";
+                    elGoTitle.style.color = "#888"; // Grey/Dead
+                    elGoMsg.innerText = "Your legacy turns to dust...";
+                }
+            }
+            if (state.rematchCount > 0) {
+                elRematchStatus.classList.remove("hidden");
+                elRematchStatus.innerText = `${state.rematchCount} / 2 PLAYERS READY`;
+            } else {
+                elRematchStatus.classList.add("hidden");
+            }
+        }
     }
-    
-    // Ensure HUD is visible (css handles this via opacity on panel-in-game)
-    
-    if (btnRematch) {
-      btnRematch.disabled = false;
-      btnRematch.innerText = "REMATCH";
-    }
-    if (elRematchStatus) elRematchStatus.classList.add("hidden");
-    
-  // -- PHASE: ENDED --
-  } else if (state.phase === "ended") {
-    if (elPauseOverlay) elPauseOverlay.classList.add("hidden");
-    elBottomPanel.classList.remove("panel-in-game"); // Naik lagi
-    
-    if (elGameOver) {
-      elGameOver.classList.remove("hidden");
-      const isWinner = state.winner === myTeamId;
-      if (elGoTitle && elGoMsg) {
-          // [LORE] Game Over Text
-          const myFaction = (state.players[myTeamId] && state.players[myTeamId].faction) || "neutral";
-          
-          if (isWinner) {
-              if (myFaction === 'solaris') {
-                  elGoTitle.innerText = "LIGHT PREVAILS";
-                  elGoTitle.style.color = "#FFD700";
-                  elGoMsg.innerText = "The Order of Solaris has secured destiny.";
-              } else if (myFaction === 'noctis') {
-                  elGoTitle.innerText = "THE VOID CONSUMES";
-                  elGoTitle.style.color = "#9C27B0";
-                  elGoMsg.innerText = "The Cult of Noctis has broken fate.";
-              } else {
-                  elGoTitle.innerText = "VICTORY";
-                  elGoTitle.style.color = "#00FF00";
-                  elGoMsg.innerText = "The enemy King has fallen!";
-              }
-          } else {
-              elGoTitle.innerText = "DEFEAT";
-              elGoTitle.style.color = "#888"; // Grey/Dead
-              elGoMsg.innerText = "Your legacy turns to dust...";
-          }
-      }
-      if (state.rematchCount > 0) {
-        elRematchStatus.classList.remove("hidden");
-        elRematchStatus.innerText = `${state.rematchCount} / 2 PLAYERS READY`;
-      } else {
-        elRematchStatus.classList.add("hidden");
-      }
-    }
-  }
 }
 
 import { toRoman } from "../../utils/common.js";
@@ -205,7 +215,7 @@ import { toRoman } from "../../utils/common.js";
 // Deck Builder State (Already declared above)
 let dbFilter = "all"; // all, unit, spell, taboo
 let dbSearch = "";
-let currentDbFaction = "neutral"; 
+let currentDbFaction = "neutral";
 
 let hasShownReveal = false; // [NEW] Flag for Faction Reveal
 let isRevealing = false;
@@ -213,13 +223,13 @@ let lastRevealedFaction = null;
 
 function renderFactionReveal(faction) {
     if (isRevealing || hasShownReveal) return; // Prevent double trigger
-    
+
     // Only trigger if faction changed or first time
     if (lastRevealedFaction === faction && hasShownReveal) return;
 
     isRevealing = true;
     lastRevealedFaction = faction;
-    
+
     // Create Overlay (Or reuse existing Omen one? Better make new one for distinct style)
     let overlay = document.getElementById("faction-reveal-overlay");
     if (!overlay) {
@@ -227,18 +237,41 @@ function renderFactionReveal(faction) {
         overlay.id = "faction-reveal-overlay";
         document.body.appendChild(overlay);
     }
-    
-    const isSolaris = faction === 'solaris';
-    const title = isSolaris ? "THE ORDER OF SOLARIS" : "THE CULT OF NOCTIS";
-    const subtitle = isSolaris ? "DESTINY IS ILLUMINATED" : "FATE IS BROKEN";
-    const lore = isSolaris 
-        ? "You have been chosen to uphold the light." 
-        : "You have been chosen to embrace the void.";
-    
-    const color = isSolaris ? "#FFD700" : "#9C27B0";
-    const bg = isSolaris 
-        ? "linear-gradient(45deg, #000, #332a00)" 
-        : "linear-gradient(45deg, #000, #1a0018)";
+
+    // [NEW] Dynamic Lore
+    const factionData = {
+        'solaris': {
+            title: "THE ORDER OF SOLARIS",
+            subtitle: "DESTINY IS ILLUMINATED",
+            lore: "You have been chosen to uphold the light.",
+            color: "#FFD700",
+            bg: "linear-gradient(45deg, #000, #332a00)"
+        },
+        'noctis': {
+            title: "THE CULT OF NOCTIS",
+            subtitle: "FATE IS BROKEN",
+            lore: "You have been chosen to embrace the void.",
+            color: "#9C27B0",
+            bg: "linear-gradient(45deg, #000, #1a0018)"
+        },
+        'mortis': {
+            title: "THE LEGION OF MORTIS",
+            subtitle: "DEATH IS A BEGINNING",
+            lore: "You have been chosen to guide the passed.",
+            color: "#4CAF50",
+            bg: "linear-gradient(45deg, #000, #0a1a0a)"
+        },
+        'chronis': {
+            title: "THE KEEPERS OF CHRONIS",
+            subtitle: "TIME IS FLUID",
+            lore: "You have been chosen to rewrite history.",
+            color: "#2196F3",
+            bg: "linear-gradient(45deg, #000, #0a1a33)"
+        }
+    };
+    const data = factionData[faction] || factionData['solaris'];
+
+    const { title, subtitle, lore, color, bg } = data;
 
     overlay.style.background = bg;
     overlay.innerHTML = `
@@ -248,18 +281,18 @@ function renderFactionReveal(faction) {
             <div class="reveal-lore">${lore}</div>
         </div>
     `;
-    
+
     // Force Reflow
     overlay.classList.remove("visible");
-    overlay.offsetHeight; 
+    overlay.offsetHeight;
     overlay.classList.add("visible");
-    
+
     // Hide logic
     setTimeout(() => {
         overlay.classList.remove("visible");
         isRevealing = false;
         hasShownReveal = true;
-        
+
         // Trigger UI Update to show Deck Builder
         // Note: We rely on the next game loop update or force it if needed.
         // But since updatePanelState runs every tick, it will see hasShownReveal=true
@@ -280,14 +313,19 @@ function renderDeckBuilder(faction) {
     if (db) return; // Already rendered
 
     currentDbFaction = faction; // [FIX] Store faction
-    
+
     db = document.createElement("div");
     db.id = "deck-builder";
-    
-    const factionDisplay = faction === 'solaris' ? "Solaris" : "Noctis";
-    const lore = faction === 'solaris' 
-        ? "Light reveals all."
-        : "Shadows tear the pages of destiny.";
+
+    const factionDisplay = faction.charAt(0).toUpperCase() + faction.slice(1);
+
+    const loreMap = {
+        'solaris': "Light reveals all.",
+        'noctis': "Shadows tear the pages of destiny.",
+        'mortis': "Death is not the end, but a resource.",
+        'chronis': "Time is a river to be redirected."
+    };
+    const lore = loreMap[faction] || "Fate is unknown.";
 
     db.innerHTML = `
         <div class="db-top-bar">
@@ -322,9 +360,9 @@ function renderDeckBuilder(faction) {
         <!-- Details Overlay attached to DB -->
         <div id="card-detail-overlay"></div>
     `;
-    
+
     elBottomPanel.appendChild(db);
-    
+
     // Attach Listeners
     db.querySelectorAll(".db-filter-btn").forEach(btn => {
         btn.onclick = (e) => {
@@ -334,14 +372,14 @@ function renderDeckBuilder(faction) {
             refreshCardGrid(currentDbFaction); // [FIX] Use stored faction
         }
     });
-    
+
     db.querySelector("#db-search").oninput = (e) => {
         dbSearch = e.target.value.toLowerCase();
         refreshCardGrid(currentDbFaction);
     };
-    
+
     db.querySelector("#btn-submit-deck").onclick = submitDeck;
-    
+
     refreshCardGrid(currentDbFaction);
     updateDeckListUI();
 }
@@ -350,45 +388,45 @@ function refreshCardGrid(faction) {
     const grid = document.getElementById("db-card-grid");
     if (!grid) return;
     grid.innerHTML = "";
-    
+
     const validCards = Object.values(CARDS).filter(c => {
-         if (c.isToken) return false;
-         
-         // Faction Check
-         if (c.minFaction !== 'neutral' && c.minFaction !== faction) return false;
-         
-         // Search
-         if (dbSearch && !c.name.toLowerCase().includes(dbSearch)) return false;
-         
-         // Filter
-         const type = (c.type || "").toLowerCase();
-         if (dbFilter !== 'all') {
-             if (dbFilter === 'taboo') {
-                 if (!c.isTaboo) return false;
-             } else {
-                 if (type !== dbFilter) return false;
-             }
-         }
-         
-         return true;
+        if (c.isToken) return false;
+
+        // Faction Check
+        if (c.minFaction !== 'neutral' && c.minFaction !== faction) return false;
+
+        // Search
+        if (dbSearch && !c.name.toLowerCase().includes(dbSearch)) return false;
+
+        // Filter
+        const type = (c.type || "").toLowerCase();
+        if (dbFilter !== 'all') {
+            if (dbFilter === 'taboo') {
+                if (!c.isTaboo) return false;
+            } else {
+                if (type !== dbFilter) return false;
+            }
+        }
+
+        return true;
     });
 
     validCards.forEach(card => {
         const el = createCardVisual(card);
         el.classList.add("db-card-new");
         el.onclick = () => toggleCardSelection(card.id);
-        
+
         // Dim if not selected but deck full
         if (!selectedCards.has(card.id) && selectedCards.size >= DECK_SIZE) {
             el.classList.add("dimmed");
         }
         // Highlight if selected
-        if(selectedCards.has(card.id)) {
+        if (selectedCards.has(card.id)) {
             el.style.borderColor = "#fff";
             el.style.transform = "scale(0.95)";
-            el.style.opacity = "0.5"; 
+            el.style.opacity = "0.5";
         }
-        
+
         // Inspect on Right Click
         el.oncontextmenu = (e) => {
             e.preventDefault();
@@ -401,31 +439,34 @@ function refreshCardGrid(faction) {
 
 function createCardVisual(card) {
     const el = document.createElement("div");
-    
+
     // Determine Visual Theme
-    let themeClass = "card-neutral";
-    let sigilClass = "sigil-neutral";
-    
-    if (card.minFaction === 'solaris') { themeClass = "card-solaris"; sigilClass = "sigil-solaris"; }
-    if (card.minFaction === 'noctis') { themeClass = "card-noctis"; sigilClass = "sigil-noctis"; }
-    
+    let themeClass = `card-${card.minFaction}`; // Default dynamic class
+    let sigilClass = `sigil-${card.minFaction}`;
+
+    // Fallback if not standard
+    if (card.minFaction === 'neutral') {
+        themeClass = "card-neutral";
+        sigilClass = "sigil-neutral";
+    }
+
     // [FIX] Taboo Check
     if (card.isTaboo) {
         themeClass = "card-taboo";
         sigilClass = "sigil-taboo";
     }
-    
+
     el.className = `card-visual ${themeClass}`;
-    
+
     // [FIX] Type Mapping
     const rawType = (card.type || "").toLowerCase();
-    let typeClass = 'type-spell'; 
-    let typeLabel = "SPELL"; 
-    
-    if(rawType === 'vessel' || rawType === 'unit') { typeClass = 'type-unit'; typeLabel = "VESSEL"; }
-    else if(rawType === 'ritual' || rawType === 'spell') { typeClass = 'type-spell'; typeLabel = "RITUAL"; }
-    else if(rawType === 'sanctum' || rawType === 'building') { typeClass = 'type-building'; typeLabel = "SANCTUM"; }
-    
+    let typeClass = 'type-spell';
+    let typeLabel = "SPELL";
+
+    if (rawType === 'vessel' || rawType === 'unit') { typeClass = 'type-unit'; typeLabel = "VESSEL"; }
+    else if (rawType === 'ritual' || rawType === 'spell') { typeClass = 'type-spell'; typeLabel = "RITUAL"; }
+    else if (rawType === 'sanctum' || rawType === 'building') { typeClass = 'type-building'; typeLabel = "SANCTUM"; }
+
     el.innerHTML = `
         <div class="card-roman-cost">${toRoman(card.cost)}</div>
         <div class="card-type-indicator ${typeClass}" title="${typeLabel}"></div>
@@ -444,21 +485,21 @@ function toggleCardSelection(id) {
             showToast(`Max ${DECK_SIZE} cards!`, "error");
             return;
         }
-        
+
         // [NEW] Taboo Limit Check
         const card = CARDS[id];
         if (card.isTaboo) {
             let tabooCount = 0;
             selectedCards.forEach(cid => {
-                if(CARDS[cid] && CARDS[cid].isTaboo) tabooCount++;
+                if (CARDS[cid] && CARDS[cid].isTaboo) tabooCount++;
             });
-            
-            if (tabooCount >= 1) {
-                showToast("Limit: 1 Taboo Card per Deck!", "error");
+
+            if (tabooCount >= MAX_TABOO_CARDS) {
+                showToast(`The veil cannot sustain more than ${MAX_TABOO_CARDS} Taboo card!`, "error");
                 return;
             }
         }
-        
+
         selectedCards.add(id);
     }
     // Refresh Grid (for dimming) and Sidebar
@@ -469,14 +510,14 @@ function toggleCardSelection(id) {
 function updateDeckListUI() {
     const list = document.getElementById("db-deck-list");
     const countVal = document.getElementById("db-count-val");
-    if(!list) return;
-    
+    if (!list) return;
+
     list.innerHTML = "";
-    if(countVal) countVal.innerText = selectedCards.size;
-    
+    if (countVal) countVal.innerText = selectedCards.size;
+
     const btn = document.getElementById("btn-submit-deck");
-    if(btn) {
-        if(selectedCards.size === DECK_SIZE) {
+    if (btn) {
+        if (selectedCards.size === DECK_SIZE) {
             btn.classList.add("ready");
             btn.style.opacity = 1;
         } else {
@@ -487,25 +528,25 @@ function updateDeckListUI() {
 
     selectedCards.forEach(id => {
         const card = CARDS[id];
-        if(!card) return;
-        
+        if (!card) return;
+
         const item = document.createElement("div");
         const theme = card.minFaction === 'solaris' ? 'item-solaris' : (card.minFaction === 'noctis' ? 'item-noctis' : '');
         item.className = `db-deck-item ${theme}`;
         item.innerHTML = `<span>${card.name}</span><span>${toRoman(card.cost)}</span>`;
         item.onclick = () => toggleCardSelection(id);
-        
+
         // Hover to preview?
         item.onmouseenter = () => { /* Optional: quick preview? */ };
-        
+
         list.appendChild(item);
     });
 }
 
 function showCardDetail(card) {
     const overlay = document.getElementById("card-detail-overlay");
-    if(!overlay) return;
-    
+    if (!overlay) return;
+
     // Helper: Format Demerit
     let demeritHtml = "";
     if (card.isTaboo) {
@@ -516,19 +557,19 @@ function showCardDetail(card) {
         }
         demeritHtml = `<div class="detail-demerit">⚠️ TABOO: ${demeritText}</div>`;
     }
-    
+
     // Helper: Count
     let countHtml = "";
     if (card.stats && card.stats.count > 1) {
         countHtml = `<div class="detail-badge">x${card.stats.count} Units</div>`;
     }
-    
+
     // Helper: Friendly Fire Warning
     let ffHtml = "";
     if (card.stats && card.stats.targetTeam === 'all') {
         ffHtml = `<div class="detail-warning">⚔️ ATTACKS ALLIES</div>`;
     }
-    
+
     overlay.innerHTML = `
         <div class="detail-card-view ${card.isTaboo ? 'border-taboo' : ''}">
             <button class="btn-close-detail" onclick="document.getElementById('card-detail-overlay').classList.remove('visible')">×</button>
@@ -558,10 +599,10 @@ function showCardDetail(card) {
             </div>
         </div>
     `;
-    
+
     overlay.classList.add("visible");
     overlay.onclick = (e) => {
-        if(e.target === overlay) overlay.classList.remove("visible");
+        if (e.target === overlay) overlay.classList.remove("visible");
     };
 }
 
@@ -570,7 +611,7 @@ function submitDeck() {
         showToast(`Select exactly ${DECK_SIZE} cards!`, "error");
         return;
     }
-    
+
     isDeckSubmitted = true;
     _socket.emit("submit_deck", Array.from(selectedCards));
     renderWaitingScreen();
@@ -585,55 +626,59 @@ function renderWaitingScreen() {
 }
 
 function updateArcana(state) {
-  if (myTeamId === -1) return;
-  document.getElementById("info-row").style.display = "flex";
-  const myPlayer = state.players[myTeamId];
-  if (!myPlayer) return;
-  const current = myPlayer.arcana;
-  const pct = (current / MAX_ARCANA) * 100;
-  elFill.style.width = `${pct}%`;
-  elText.innerText = Math.floor(current);
-  elFill.style.background =
-    current >= MAX_ARCANA
-      ? "linear-gradient(90deg, #e040fb, #ffffff)"
-      : "linear-gradient(90deg, #7b1fa2, #e040fb)";
+    if (myTeamId === -1) return;
+    document.getElementById("info-row").style.display = "flex";
+    const myPlayer = state.players[myTeamId];
+    if (!myPlayer) return;
+    const current = myPlayer.arcana;
+    const pct = (current / MAX_ARCANA) * 100;
+    elFill.style.width = `${pct}%`;
+    elText.innerText = Math.floor(current);
+    elFill.style.background =
+        current >= MAX_ARCANA
+            ? "linear-gradient(90deg, #e040fb, #ffffff)"
+            : "linear-gradient(90deg, #7b1fa2, #e040fb)";
 }
 
 function renderSpectatorHUD(state) {
-  if (!elHand.classList.contains("spectator-mode")) {
-    elHand.innerHTML = "";
-    elHand.classList.add("spectator-mode");
-    document.getElementById("info-row").style.display = "none";
-    document.getElementById("bottom-panel").style.pointerEvents = "auto"; 
-  }
-  const p0 = state.players[0]; const p1 = state.players[1];
-  const currentSignature = `${p0.connected}-${p1.connected}`;
-  
-  // Force update jika paused berubah (biar tombol join muncul/hilang real time)
-  // Atau biarkan dirty check signature handle. 
-  // Kita tambahkan state.paused ke signature biar reactive terhadap pause event.
-  const newSignature = `${currentSignature}-${state.paused}`;
-  
-  if (newSignature === lastSpectatorSignature) return;
-  lastSpectatorSignature = newSignature;
+    if (!elHand.classList.contains("spectator-mode")) {
+        elHand.innerHTML = "";
+        elHand.classList.add("spectator-mode");
+        document.getElementById("info-row").style.display = "none";
+        document.getElementById("bottom-panel").style.pointerEvents = "auto";
+    }
+    const p0 = state.players[0]; const p1 = state.players[1];
+    const currentSignature = `${p0.connected}-${p1.connected}`;
 
-  let html = `<div class="spectator-hud-container"><h2 style="color:#fff; margin:0;">SPECTATOR MODE</h2>`;
-  
-  // Checking Disconnects
-  if (!p0.connected) html += `<div style="text-align:center;"><div class="spectator-status-text">Solaris (Blue) is Disconnected!</div><button class="spectator-join-btn" onclick="window.joinGame(0)">TAKE OVER SOLARIS</button></div>`;
-  if (!p1.connected) html += `<div style="text-align:center;"><div class="spectator-status-text">Noctis (Red) is Disconnected!</div><button class="spectator-join-btn" onclick="window.joinGame(1)">TAKE OVER NOCTIS</button></div>`;
-  
-  if (state.phase === 'ended') {
-      html += `<div style="text-align:center; margin-top:10px;">
+    // Force update jika paused berubah (biar tombol join muncul/hilang real time)
+    // Atau biarkan dirty check signature handle. 
+    // Kita tambahkan state.paused ke signature biar reactive terhadap pause event.
+    const newSignature = `${currentSignature}-${state.paused}`;
+
+    if (newSignature === lastSpectatorSignature) return;
+    lastSpectatorSignature = newSignature;
+
+    let html = `<div class="spectator-hud-container"><h2 style="color:#fff; margin:0;">SPECTATOR MODE</h2>`;
+
+    // Checking Disconnects
+    // [FIX] Dynamic Faction Names
+    const f0 = p0.faction ? p0.faction.charAt(0).toUpperCase() + p0.faction.slice(1) : "P1";
+    const f1 = p1.faction ? p1.faction.charAt(0).toUpperCase() + p1.faction.slice(1) : "P2";
+
+    if (!p0.connected) html += `<div style="text-align:center;"><div class="spectator-status-text">${f0} (Blue) is Disconnected!</div><button class="spectator-join-btn" onclick="window.joinGame(0)">TAKE OVER ${f0.toUpperCase()}</button></div>`;
+    if (!p1.connected) html += `<div style="text-align:center;"><div class="spectator-status-text">${f1} (Red) is Disconnected!</div><button class="spectator-join-btn" onclick="window.joinGame(1)">TAKE OVER ${f1.toUpperCase()}</button></div>`;
+
+    if (state.phase === 'ended') {
+        html += `<div style="text-align:center; margin-top:10px;">
         <div class="spectator-status-text">GAME OVER</div>
         <button class="spectator-join-btn" onclick="window.location.reload()">LEAVE ARENA</button>
       </div>`;
-  } else if (p0.connected && p1.connected) {
-      html += `<div class="spectator-status-text">Match in progress...</div>`;
-  }
-  
-  html += `</div>`;
-  elHand.innerHTML = html;
+    } else if (p0.connected && p1.connected) {
+        html += `<div class="spectator-status-text">Match in progress...</div>`;
+    }
+
+    html += `</div>`;
+    elHand.innerHTML = html;
 }
 
 function updatePauseState(state) {
@@ -641,16 +686,16 @@ function updatePauseState(state) {
 
     if (state.paused) {
         elPauseOverlay.classList.remove("hidden");
-        
+
         // Update Reason Text
         if (elPauseReason) elPauseReason.innerText = state.pauseReason || "Game Paused";
-        
+
         // Update Timer Countdown
         if (state.pauseEndTime) {
             // Kita pakai selisih dari data packet terakhir
-            const remainingMs = state.pauseEndTime - (state.timestamp || Date.now()); 
+            const remainingMs = state.pauseEndTime - (state.timestamp || Date.now());
             const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
-            
+
             if (elPauseTimer) elPauseTimer.innerText = remainingSec;
         }
     } else {
@@ -659,10 +704,10 @@ function updatePauseState(state) {
 }
 
 window.joinGame = (teamId) => {
-  if (_socket) {
-    _socket.emit("request_join_game", teamId);
-    showToast("Requesting to join...", "info");
-  }
+    if (_socket) {
+        _socket.emit("request_join_game", teamId);
+        showToast("Requesting to join...", "info");
+    }
 };
 
 function renderSpectatorWaitingScreen(state) {
@@ -674,11 +719,11 @@ function renderSpectatorWaitingScreen(state) {
         const p1Ready = state.players[1].ready ? "READY" : "PREPARING";
         const p0Status = document.getElementById("spec-p0-status");
         const p1Status = document.getElementById("spec-p1-status");
-        if(p0Status) {
+        if (p0Status) {
             p0Status.innerText = p0Ready;
             p0Status.className = state.players[0].ready ? "status-ready" : "status-prep";
         }
-        if(p1Status) {
+        if (p1Status) {
             p1Status.innerText = p1Ready;
             p1Status.className = state.players[1].ready ? "status-ready" : "status-prep";
         }

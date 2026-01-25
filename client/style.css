@@ -731,6 +731,32 @@ button:disabled {
   color: #888;
 }
 
+/* Mortis Skull */
+.sigil-mortis::before {
+  content: "💀";
+  font-size: 30px;
+  color: #4CAF50;
+}
+.card-mortis {
+  border-color: #4CAF50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.2), inset 0 0 20px rgba(76, 175, 80, 0.1);
+  background: linear-gradient(135deg, #0a1a0a 0%, #1a2a1a 100%);
+}
+.card-mortis .card-roman-cost { color: #a5d6a7; }
+
+/* Chronis Hourglass (Approx) */
+.sigil-chronis::before {
+  content: "⏳";
+  font-size: 30px;
+  color: #2196F3;
+}
+.card-chronis {
+  border-color: #2196F3;
+  box-shadow: 0 0 5px rgba(33, 150, 243, 0.2), inset 0 0 20px rgba(33, 150, 243, 0.1);
+  background: linear-gradient(135deg, #0a1a33 0%, #000c24 100%);
+}
+.card-chronis .card-roman-cost { color: #90caf9; }
+
 /* Typography override */
 .card-roman-cost {
   position: absolute; top: 3px; left: 50%;
